@@ -1,6 +1,6 @@
 /* 
 
-   Winux kernel.
+   Winuz kernel.
    Copyright (C) 2026 Skokoo
 
    This program is free software; you can redistribute it and/or modify
