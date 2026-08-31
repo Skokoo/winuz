@@ -6,14 +6,14 @@ LDFLAGS = -T linker.ld -nostdlib
 all: winux.bin
 
 winux.bin: kernel.o
-	$(LD) $(LDFLAGS) kernel.o -o winux.elf
-	llvm-objcopy -O binary winux.elf winux.bin
+	$(LD) $(LDFLAGS) kernel.o -o winuz.elf
+	llvm-objcopy -O binary winuz.elf winuz.bin
 
 kernel.o: kernel.c io.h paging.h vfs.h vga.h
 	$(CC) $(CFLAGS) -c kernel.c -o kernel.o
 
 run: winux.bin
-	qemu-system-x86_64 -kernel winux.bin
+	qemu-system-x86_64 -kernel winuz.bin
 
 clean:
 	rm -f *.o *.bin
