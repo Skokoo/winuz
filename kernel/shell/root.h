@@ -19,8 +19,8 @@
 
 */   
 
-#ifndef ROOTDEV_H
-#define ROOTDEV_H
+#ifndef ROOT_H
+#define ROOT_H
 
 #include "../kernel/io.h"
 #include "../kernel/vga.h"
