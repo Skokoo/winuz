@@ -53,7 +53,7 @@ static inline void execute_command(void) {
     /*
     Note:
     0x41BF7CBE is the pre-calculated FNV-1a 32bit hash value for the string "REBOOT"
-    0xE710FA4A is the pre-calculated FNV-1a 32bit hash value for the string "SHWDIR" (do
+    0xE710FA4A is the pre-calculated FNV-1a 32bit hash value for the string "SHWDIR"
     0x7C9861DC is the pre-calculated FNV-1a 32bit hash value for the string "SAY" 
     */    
     switch (cmd_hash) {
