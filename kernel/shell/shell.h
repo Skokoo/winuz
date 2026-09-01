@@ -64,10 +64,10 @@ static inline void execute_command(void) {
 
         case 0xE710FA4A:
             if (root.file_count == 0) {
-                pr("[sys] Directory is empty.");
+                pr("[Sys] Directory is empty.");
             } else {
-                struct vfs_node* file_ptr = root.files;
-                struct vfs_node* end_ptr = root.files + root.file_count;
+                struct file* file_ptr = root.files;
+                struct file* end_ptr = root.files + root.file_count;
                 
                 while (file_ptr < end_ptr) {
                     pr(file_ptr->name);
