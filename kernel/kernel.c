@@ -1,24 +1,3 @@
-/* 
-
-   Winuz kernel.
-   Copyright (C) 2026 Skokoo
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License along
-   with this program; if not, write to the Free Software Foundation, Inc.,
-   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. 
-
-*/
-
 __attribute__((section(".text"))) 
 const unsigned int multiboot_header[] = {
     0x1BADB002,               
@@ -35,16 +14,16 @@ const unsigned int multiboot_header[] = {
 #include "paging.h"
 #include "vfs.h"
 #include "vga.h"
+#include "/shell/shell.h"
 
 volatile unsigned char proc_active = 0;
 
-#define BUFFER_SIZE 256
-volatile unsigned char ring_buffer[BUFFER_SIZE];
+volatile unsigned char ring_buffer[256];
 volatile unsigned int ring_head = 0;
 volatile unsigned int ring_tail = 0;
 
 void enqueue_scancode(unsigned char code) {
-    unsigned int next = (ring_head + 1) % BUFFER_SIZE;
+    unsigned int next = (ring_head + 1) % 256;
     if (next != ring_tail) {
         ring_buffer[ring_head] = code;
         ring_head = next;
@@ -52,11 +31,9 @@ void enqueue_scancode(unsigned char code) {
 }
 
 unsigned char dequeue_scancode(void) {
-    if (ring_head == ring_tail) {
-        return 0;
-    }
+    if (ring_head == ring_tail) return 0;
     unsigned char code = ring_buffer[ring_tail];
-    ring_tail = (ring_tail + 1) % BUFFER_SIZE;
+    ring_tail = (ring_tail + 1) % 256;
     return code;
 }
 
@@ -115,14 +92,16 @@ void kmain(void) {
                 }             
 
                 if (c == 0x1C) {
-                    newline();
-                    pr("> ");
+                    execute_command();
                     continue;
                 }
 
                 if (!proc_active) {
                     if (c == 0x0E) {
-                        vga_backspace();
+                        if (cmd_idx > 0) {
+                            cmd_idx--;
+                            vga_backspace();
+                        }
                         continue;
                     }
 
@@ -132,6 +111,9 @@ void kmain(void) {
                             if ((unsigned int)p >= 2000) p = 0;
                             if (!shift_pressed && tgt >= 'A' && tgt <= 'Z') {
                                 tgt = tgt + 32;
+                            }
+                            if (cmd_idx < 254) {
+                                cmd_buffer[cmd_idx++] = tgt;
                             }
                             vga_b[p++] = (current_color << 8) | (unsigned char)tgt;
                             mv(p);
