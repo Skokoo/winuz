@@ -22,9 +22,9 @@
 #ifndef SHELL_H
 #define SHELL_H
 
-#include "../kernel/io.h"
-#include "../kernel/vga.h"
-#include "../kernel/vfs.h"
+#include "../io.h"
+#include "../vga.h"
+#include "../vfs.h"
 
 char cmd_buffer[256];
 unsigned int cmd_idx = 0;
