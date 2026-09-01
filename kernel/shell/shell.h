@@ -58,13 +58,14 @@ static inline void execute_command(void) {
 
     unsigned int cmd_hash = hash_fnv1a(cmd_buffer, cmd_idx);
 
-    /*
-    Note:
-    0x41BF7CBE is the pre-calculated FNV-1a 32bit hash value for "REBOOT"
-    0xE710FA4A is the pre-calculated FNV-1a 32bit hash value for "SHWDIR"
-    0x7C9861DC is the pre-calculated FNV-1a 32bit hash value for "SAY" 
-    0x70EC43EF is the pre-calculated FNV-1a 32bit hash value for "GOTO"
-    0xB67AA316 is the pre-calculated FNV-1a 32bit hash value for "REMOVE"
+   /*
+    * Note:
+    * 0x41BF7CBE is the pre-calculated FNV-1a 32bit hash value for "REBOOT"
+    * 0xE710FA4A is the pre-calculated FNV-1a 32bit hash value for "SHWDIR"
+    * 0x7C9861DC is the pre-calculated FNV-1a 32bit hash value for "SAY" 
+    * 0x70EC43EF is the pre-calculated FNV-1a 32bit hash value for "GOTO"
+    * 0xB67AA316 is the pre-calculated FNV-1a 32bit hash value for "REMOVE"
+    * 0x7C81A169 is the pre-calculated FNV-1a 32bit hash value for "CPUID"
     */    
     switch (cmd_hash) {
         case 0x41BF7CBE:
@@ -87,6 +88,41 @@ static inline void execute_command(void) {
                     pr("   ");
                     file_ptr++;
                 }
+            }
+            newline();
+            break;
+
+        case 0x7C81A169:
+            {
+                unsigned int regs[4] = {0};
+                __asm__ volatile (
+                    "cpuid"
+                    : "=a"(regs[0]), "=b"(regs[1]), "=c"(regs[2]), "=d"(regs[3])
+                    : "a"(0)
+                    : "memory"
+                );
+
+                char vendor_string[13];
+                char* const raw_ptr = (char* const)&regs[1];
+                
+                void* const dest_ptr = (void* const)vendor_string;
+                const void* const src_ptr = (const void* const)raw_ptr;
+                mcpy64(dest_ptr, src_ptr, 1);
+                
+                char* const raw_edx = (char* const)&regs[3];
+                void* const dest_edx = (void* const)&vendor_string[4];
+                const void* const src_edx = (const void* const)raw_edx;
+                mcpy64(dest_edx, src_edx, 1);
+                
+                char* const raw_ecx = (char* const)&regs[2];
+                void* const dest_ecx = (void* const)&vendor_string[8];
+                const void* const src_ecx = (const void* const)raw_ecx;
+                mcpy64(dest_ecx, src_ecx, 1);
+
+                vendor_string[12] = '\0';
+
+                pr("[sys] CPU vendor string: ");
+                pr(vendor_string);
             }
             newline();
             break;
