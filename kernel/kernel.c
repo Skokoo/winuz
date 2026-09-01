@@ -38,6 +38,28 @@ const unsigned int multiboot_header[] = {
 
 volatile unsigned char proc_active = 0;
 
+#define BUFFER_SIZE 256
+volatile unsigned char ring_buffer[BUFFER_SIZE];
+volatile unsigned int ring_head = 0;
+volatile unsigned int ring_tail = 0;
+
+void enqueue_scancode(unsigned char code) {
+    unsigned int next = (ring_head + 1) % BUFFER_SIZE;
+    if (next != ring_tail) {
+        ring_buffer[ring_head] = code;
+        ring_head = next;
+    }
+}
+
+unsigned char dequeue_scancode(void) {
+    if (ring_head == ring_tail) {
+        return 0;
+    }
+    unsigned char code = ring_buffer[ring_tail];
+    ring_tail = (ring_tail + 1) % BUFFER_SIZE;
+    return code;
+}
+
 void kmain(void) {
     init();
     volatile unsigned short* vga_b = (volatile unsigned short*)VGA;
@@ -53,12 +75,11 @@ void kmain(void) {
     newline();
     pr("> ");
 
-    unsigned char last = 0;
     unsigned char ctrl_pressed = 0;
     unsigned char shift_pressed = 0;
     unsigned long long loop_counter = 0;
 
-    static const char m[128] = {
+    static const char m = {
         [0x1E] = 'A', [0x30] = 'B', [0x2E] = 'C', [0x20] = 'D', [0x12] = 'E',
         [0x21] = 'F', [0x22] = 'G', [0x23] = 'H', [0x17] = 'I', [0x24] = 'J',
         [0x25] = 'K', [0x26] = 'L', [0x32] = 'M', [0x31] = 'N', [0x18] = 'O',
@@ -68,10 +89,14 @@ void kmain(void) {
     };
 
     while (1) {
-        unsigned char c = inb(0x60);
-        if (c != last) {
-            last = c;
+        unsigned char status = inb(0x64);
+        if (status & 0x01) {
+            unsigned char code = inb(0x60);
+            enqueue_scancode(code);
+        }
 
+        unsigned char c = dequeue_scancode();
+        if (c != 0) {
             if (c == 0x1D) ctrl_pressed = 1;
             else if (c == 0x9D) ctrl_pressed = 0;
             else if (c == 0x2A || c == 0x36) shift_pressed = 1;
