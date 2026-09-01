@@ -77,7 +77,7 @@ void kmain(void) {
     unsigned char shift_pressed = 0;
     unsigned long long loop_counter = 0;
 
-    static const char m[] = {
+    static const char m[128] = {
         [0x1E] = 'A', [0x30] = 'B', [0x2E] = 'C', [0x20] = 'D', [0x12] = 'E',
         [0x21] = 'F', [0x22] = 'G', [0x23] = 'H', [0x17] = 'I', [0x24] = 'J',
         [0x25] = 'K', [0x26] = 'L', [0x32] = 'M', [0x31] = 'N', [0x18] = 'O',
