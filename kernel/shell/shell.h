@@ -52,9 +52,11 @@ static inline void execute_command(void) {
 
     /*
     Note:
-    0x41BF7CBE is the pre-calculated FNV-1a 32bit hash value for the string "REBOOT"
-    0xE710FA4A is the pre-calculated FNV-1a 32bit hash value for the string "SHWDIR"
-    0x7C9861DC is the pre-calculated FNV-1a 32bit hash value for the string "SAY" 
+    0x41BF7CBE is the pre-calculated FNV-1a 32bit hash value for "REBOOT"
+    0xE710FA4A is the pre-calculated FNV-1a 32bit hash value for "SHWDIR"
+    0x7C9861DC is the pre-calculated FNV-1a 32bit hash value for "SAY" 
+    0x70EC43EF is the pre-calculated FNV-1a 32bit hash value for "GOTO"
+    0xB67AA316 is the pre-calculated FNV-1a 32bit hash value for "REMOVE"
     */    
     switch (cmd_hash) {
         case 0x41BF7CBE:
@@ -68,7 +70,7 @@ static inline void execute_command(void) {
             } else {
                 struct file* file_ptr = root.files;
                 struct file* end_ptr = root.files + root.file_count;
-                
+
                 while (file_ptr < end_ptr) {
                     pr(file_ptr->name);
                     if (file_ptr->is_dir) {
@@ -84,6 +86,61 @@ static inline void execute_command(void) {
         case 0x7C9861DC:
             if (cmd_idx > 4) {
                 pr(&cmd_buffer[4]);
+            }
+            newline();
+            break;
+
+        case 0x70EC43EF:           
+            if (cmd_idx > 5) {
+                char* target_dir = &cmd_buffer[5];
+                int found = 0;
+                struct file* file_ptr = root.files;
+                struct file* end_ptr = root.files + root.file_count;
+
+                while (file_ptr < end_ptr) {
+                    if (file_ptr->is_dir && m_str_cmp(file_ptr->name, target_dir) == 0) {
+                        pr("[sys] Moved to directory: ");
+                        pr(file_ptr->name);
+                        found = 1;
+                        break;
+                    }
+                    file_ptr++;
+                }
+                if (!found) {
+                    pr("[sys] Directory not found.");
+                }
+            } else {
+                pr("[sys] Usage: GOTO [dir_name]");
+            }
+            newline();
+            break;
+
+        case 0xB67AA316:
+            if (cmd_idx > 7) {
+                char* target_file = &cmd_buffer[7];
+                int found = 0;
+                struct file* file_ptr = root.files;
+                struct file* end_ptr = root.files + root.file_count;
+
+                while (file_ptr < end_ptr) {
+                    if (m_str_cmp(file_ptr->name, target_file) == 0) {
+                        found = 1;                       
+                        struct file* next_file = file_ptr + 1;
+                        while (next_file < end_ptr) {
+                            *file_ptr = *next_file;
+                            file_ptr++;
+                            next_file++;
+                        }
+                        root.file_count--;                       
+                        break;
+                    }
+                    file_ptr++;
+                }
+                if (!found) {
+                    pr("[sys] Object not found.");
+                }
+            } else {
+                pr("[sys] Usage: REMOVE [file_name]");
             }
             newline();
             break;
