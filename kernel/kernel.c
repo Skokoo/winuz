@@ -35,7 +35,7 @@ const unsigned int multiboot_header[] = {
 #include "paging.h"
 #include "vfs.h"
 #include "vga.h"
-#include "/shell/shell.h"
+#include "shell/shell.h"
 
 volatile unsigned char proc_active = 0;
 
