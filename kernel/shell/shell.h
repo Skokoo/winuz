@@ -25,9 +25,11 @@
 #include "../io.h"
 #include "../vga.h"
 #include "../vfs.h"
+#include "shell/root.h"
 
 char cmd_buffer[256];
 unsigned int cmd_idx = 0;
+unsigned char r_dev = 0;
 
 static inline int m_str_cmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) {
@@ -66,6 +68,8 @@ static inline void execute_command(void) {
     * 0x70EC43EF is the pre-calculated FNV-1a 32bit hash value for "GOTO"
     * 0xB67AA316 is the pre-calculated FNV-1a 32bit hash value for "REMOVE"
     * 0x7C81A169 is the pre-calculated FNV-1a 32bit hash value for "CPUID"
+    * 0x5B5E05AC is the pre-calculated FNV-1a 32bit hash value for "ROOTED"
+    * 0x5B5E0D5B is the pre-calculated FNV-1a 32bit hash value for "ROOTID"
     */    
     switch (cmd_hash) {
         case 0x41BF7CBE:
@@ -104,16 +108,16 @@ static inline void execute_command(void) {
 
                 char vendor_string[13];
                 char* const raw_ptr = (char* const)&regs[1];
-                
+
                 void* const dest_ptr = (void* const)vendor_string;
                 const void* const src_ptr = (const void* const)raw_ptr;
                 mcpy64(dest_ptr, src_ptr, 1);
-                
+
                 char* const raw_edx = (char* const)&regs[3];
                 void* const dest_edx = (void* const)&vendor_string[4];
                 const void* const src_edx = (const void* const)raw_edx;
                 mcpy64(dest_edx, src_edx, 1);
-                
+
                 char* const raw_ecx = (char* const)&regs[2];
                 void* const dest_ecx = (void* const)&vendor_string[8];
                 const void* const src_ecx = (const void* const)raw_ecx;
@@ -185,6 +189,20 @@ static inline void execute_command(void) {
                 }
             } else {
                 pr("[sys] Usage: REMOVE [file_name]");
+            }
+            newline();
+            break;
+
+        case 0x5B5E05AC:
+            /* PLACEHOLDER */
+            newline();
+            break;
+
+        case 0x5B5E0D5B:            
+            if (r_dev == 1) {
+                pr("1");
+            } else {
+                pr("0");
             }
             newline();
             break;
