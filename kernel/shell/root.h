@@ -25,8 +25,7 @@
 #include "../io.h"
 #include "../vga.h"
 
-extern unsigned char r_dev;
-extern int m_str_cmp(const char* s1, const char* s2);
+extern volatile unsigned char r_dev;
 
 static inline void r_toggle(const char* param) {
     if (m_str_cmp(param, "YES") == 0) {
