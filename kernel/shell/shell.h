@@ -198,9 +198,14 @@ static inline void execute_command(void) {
                 pr("[sys] System is already running in ROOT mode.");
                 newline();
             } else {
-                r_prompt();
+                if (cmd_idx > 7) {
+                    r_toggle(&cmd_buffer[7]);
+                } else {
+                    pr("[sys] Usage: ROOTED YES");
+                    newline();
+                }
             }
-            break;                   
+            break;                
 
         case 0x5B5E0D5B:            
             if (r_dev == 1) {
