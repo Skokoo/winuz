@@ -22,8 +22,8 @@
 #ifndef ROOT_H
 #define ROOT_H
 
-#include "../kernel/io.h"
-#include "../kernel/vga.h"
+#include "../io.h"
+#include "../vga.h"
 
 extern unsigned char r_dev;
 extern int m_str_cmp(const char* s1, const char* s2);
