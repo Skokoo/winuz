@@ -25,22 +25,17 @@
 #include "../kernel/io.h"
 #include "../kernel/vga.h"
 
-extern volatile unsigned char r_dev;
-extern volatile unsigned char r_wait;
+extern unsigned char r_dev;
+extern int m_str_cmp(const char* s1, const char* s2);
 
-static inline void r_prompt(void) {
-    pr("[sys] Entering root mode, you can do anything to this kernel.");
-    newline();
-    pr("Proceed at your own risk. Continue? (y/n) ");
-    r_wait = 1;
-}
-
-static inline void r_check(char input) {
-    r_wait = 0;
-    if (input == 'y' || input == 'Y') {
-        r_dev = 1;        
+static inline void r_toggle(const char* param) {
+    if (m_str_cmp(param, "YES") == 0) {
+        r_dev = 1;
+        pr("[sys] Entering root mode, you can do anything to this kernel.");
+        newline();
+        pr("Proceed at your own risk.");       
     } else {
-        pr("[sys] Cancelled.");
+        pr("[sys] Invalid parameter. Usage: ROOTED YES");
     }
     newline();
 }
