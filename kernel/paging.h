@@ -22,43 +22,28 @@
 #ifndef PAGING_H
 #define PAGING_H
 
+#include "io.h"
+
 __attribute__((aligned(4096))) unsigned long long l4[512];
 __attribute__((aligned(4096))) unsigned long long dp[512];
 __attribute__((aligned(4096))) unsigned long long pd[512];
 
 void init(void) {
-    __asm__ volatile (
-        "xor %%rax, %%rax\n\t"
-        "mov $512, %%rcx\n\t"
-        "rep stosq"
-        :
-        : "D"(l4)
-        : "rax", "rcx", "memory"
-    );
-    __asm__ volatile (
-        "xor %%rax, %%rax\n\t"
-        "mov $512, %%rcx\n\t"
-        "rep stosq"
-        :
-        : "D"(dp)
-        : "rax", "rcx", "memory"
-    );
-    __asm__ volatile (
-        "xor %%rax, %%rax\n\t"
-        "mov $512, %%rcx\n\t"
-        "rep stosq"
-        :
-        : "D"(pd)
-        : "rax", "rcx", "memory"
-    );
+    mset64(l4, 0, 512);
+    mset64(dp, 0, 512);
+    mset64(pd, 0, 512);
 
     l4[0] = (((unsigned long long)dp) & 0x000FFFFFFFFFF000ULL) | 0x03ULL;
     dp[0] = (((unsigned long long)pd) & 0x000FFFFFFFFFF000ULL) | 0x03ULL;
 
     unsigned long long addr = 0x83ULL | (1ULL << 63); 
-    for (int i = 0; i < 512; i++) {
-        pd[i] = addr;
+    unsigned long long* pd_ptr = pd;
+    const unsigned long long* const pd_end = pd + 512;
+
+    while (pd_ptr < pd_end) {
+        *pd_ptr = addr;
         addr += 0x200000ULL;
+        pd_ptr++;
     }
 
     __asm__ volatile ("mov %0, %%cr3" :: "r"(l4) : "memory");
