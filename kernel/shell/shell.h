@@ -194,9 +194,13 @@ static inline void execute_command(void) {
             break;
 
         case 0x5B5E05AC:
-            /* PLACEHOLDER */
-            newline();
-            break;
+            if (r_dev == 1) {
+                pr("[sys] System is already running in ROOT mode.");
+                newline();
+            } else {
+                r_prompt();
+            }
+            break;                   
 
         case 0x5B5E0D5B:            
             if (r_dev == 1) {
