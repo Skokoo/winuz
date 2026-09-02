@@ -42,6 +42,8 @@ volatile unsigned char proc_active = 0;
 volatile unsigned char ring_buffer[256];
 volatile unsigned int ring_head = 0;
 volatile unsigned int ring_tail = 0;
+volatile unsigned char r_dev = 0;
+volatile unsigned char r_wait = 0;
 
 void enqueue_scancode(unsigned char code) {
     unsigned int next = (ring_head + 1) % 256;
