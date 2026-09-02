@@ -19,11 +19,6 @@
 
 */
 
-/*SSBhbSBmb3JjZWQgdG8gc2hhcmUgdGhpcyBlYXJseSBmb3IgdGhlIHNha2Ugb2Ygc29tZW9uZSBl
-bHNlJ3MgYW1iaXRpb24uIE1hcmsgdGhpcywgSSB3aWxsIGtlZXAgdGhpcyBjb21tZW50IGZvcmV2
-ZXIgYW5kIGV2ZXIuIEkgaGF2ZSB0aGUgcmlnaHQgdG8ga2VlcCB0aGlzIHVwLiBJIGFtIGZvcmNl
-ZCBieSBzb21lb25lIHdobyBrbm93cyBub3RoaW5nIGFib3V0IHByb2dyYW1taW5nLgo=*/
-
 __attribute__((section(".text"))) 
 const unsigned int multiboot_header[] = {
     0x1BADB002,               
