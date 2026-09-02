@@ -25,8 +25,8 @@
 #include "../kernel/io.h"
 #include "../kernel/vga.h"
 
-volatile unsigned char r_dev = 0;
-volatile unsigned char r_wait = 0;
+extern volatile unsigned char r_dev;
+extern volatile unsigned char r_wait;
 
 static inline void r_prompt(void) {
     pr("[sys] Entering root mode, you can do anything to this kernel.");
