@@ -36,26 +36,26 @@ static inline void io_wait(void) {
     __asm__ volatile ("outb %%al, $0x80" :: "a"(0) : "memory");
 }
 
-static inline void mcpy64(void* dest, const void* src, unsigned int count) {
-    void* dummy_dest = dest;
-    const void* dummy_src = src;
-    unsigned int dummy_count = count;
+static inline void mcpy64(void* dest, const void* src, unsigned int count) {   
+    if (!dest || !src || count == 0) return;
+
     __asm__ volatile (
-        "cld\n\t" 
-        "rep movsq" 
-        : "+D"(dummy_dest), "+S"(dummy_src), "+c"(dummy_count) 
-        :: "memory"
+        "cld\n\t"
+        "rep movsq"
+        : "=D"(dest), "=S"(src), "=c"(count)
+        : "0"(dest), "1"(src), "2"(count)
+        : "memory"
     );
 }
 
-static inline void mset64(void* dest, unsigned long long val, unsigned int count) {
-    void* dummy_dest = dest;
-    unsigned int dummy_count = count;
+static inline void mset64(void* dest, unsigned long long val, unsigned int count) {   
+    if (!dest || count == 0) return;
+
     __asm__ volatile (
-        "cld\n\t" 
-        "rep stosq" 
-        : "+D"(dummy_dest), "+c"(dummy_count) 
-        : "a"(val) 
+        "cld\n\t"
+        "rep stosq"
+        : "=D"(dest), "=c"(count)
+        : "0"(dest), "1"(count), "a"(val)
         : "memory"
     );
 }
