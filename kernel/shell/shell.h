@@ -28,7 +28,7 @@
 
 char cmd_buffer[256];
 unsigned int cmd_idx = 0;
-volatile unsigned char r_dev = 0;
+extern volatile unsigned char r_dev = 0;
 
 static inline int m_str_cmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) {
