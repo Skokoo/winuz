@@ -54,50 +54,65 @@ static inline void ata_read_sector(unsigned int lba, unsigned short* buf) {
         __asm__ volatile ("pause");
     }
 
-    for (int i = 0; i < 256; i++) {
-        buf[i] = inb(0x1F0) | (inb(0x1F0) << 8);
-    }
+    __asm__ volatile (
+        "cld\n\t"
+        "rep insw"
+        : "+D"(buf)
+        : "d"(0x1F0), "c"(256)
+        : "memory"
+    );
     ata_wait();
 }
 
 int storage_explore(unsigned int lba_root_dir) {
     unsigned short sector_buf[256];
     unsigned char* byte_buf = (unsigned char*)sector_buf;
-    
+
     root.file_count = 0;
     ata_read_sector(lba_root_dir, sector_buf);
 
-    for (int offset = 0; offset < 512; offset += 32) {
-        if (byte_buf[offset] == 0x00) break;
-        if (byte_buf[offset] == 0xE5) continue;
-        if (byte_buf[offset + 11] == 0x0F) continue;
+    unsigned char* entry_ptr = byte_buf;
+    const unsigned char* const end_entry_ptr = byte_buf + 512;
 
-        struct file* f = &root.files[root.file_count];
+    while (entry_ptr < end_entry_ptr) {
+        if (*entry_ptr == 0x00) break;
         
-        int name_idx = 0;
-        for (int i = 0; i < 8; i++) {
-            if (byte_buf[offset + i] != ' ') {
-                f->name[name_idx++] = byte_buf[offset + i];
-            }
+        unsigned char attr = *(entry_ptr + 11);
+        if (*entry_ptr == 0xE5 || attr == 0x0F) {
+            entry_ptr += 32;
+            continue;
         }
-        
-        if (!(byte_buf[offset + 11] & 0x10)) {
+
+        struct file* f = root.files + root.file_count;
+        int name_idx = 0;
+
+        const char* name_part = (const char*)entry_ptr;
+        int i = 0;
+        while (i < 8 && name_part[i] != ' ') {
+            f->name[name_idx++] = name_part[i++];
+        }
+
+        if (!(attr & 0x10)) {
             f->name[name_idx++] = '.';
-            for (int i = 0; i < 3; i++) {
-                if (byte_buf[offset + 8 + i] != ' ') {
-                    f->name[name_idx++] = byte_buf[offset + 8 + i];
-                }
+            const char* ext_part = (const char*)(entry_ptr + 8);
+            int j = 0;
+            while (j < 3 && ext_part[j] != ' ') {
+                f->name[name_idx++] = ext_part[j++];
+            }
+            if (f->name[name_idx - 1] == '.') {
+                name_idx--;
             }
         }
         f->name[name_idx] = '\0';
 
-        f->is_dir = (byte_buf[offset + 11] & 0x10) ? 1 : 0;
-        f->cluster = byte_buf[offset + 26] | (byte_buf[offset + 27] << 8);
-        f->size = byte_buf[offset + 28] | (byte_buf[offset + 29] << 8) | 
-                  (byte_buf[offset + 30] << 16) | (byte_buf[offset + 31] << 24);
+        f->is_dir = (attr & 0x10) ? 1 : 0;
+        f->cluster = *(unsigned short*)(entry_ptr + 26);
+        f->size = *(unsigned int*)(entry_ptr + 28);
 
         root.file_count++;
         if (root.file_count >= 64) break;
+
+        entry_ptr += 32;
     }
     return root.file_count;
 }
