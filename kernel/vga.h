@@ -41,11 +41,11 @@ void scroll(void) {
     void* dest = (void*)VGA;
     const void* src = (const void*)(VGA + (80 * 2));
     mcpy64(dest, src, (24 * 80 * 2) / 8);
-    
+
     void* clear_line = (void*)(VGA + (24 * 80 * 2));
     unsigned long long empty_val = 0x0720072007200720ULL;
     mset64(clear_line, empty_val, (80 * 2) / 8);
-    
+
     p = 24 * 80;
 }
 
@@ -69,6 +69,7 @@ void vga_backspace(void) {
 void pr(const char* s) {
     volatile unsigned short* b = (volatile unsigned short*)VGA;
     int cur = p;
+    static const unsigned char ansi_vga_map[] = {0x00, 0x04, 0x02, 0x06, 0x01, 0x05, 0x03, 0x07};
 
     while (*s) {
         unsigned char c = (unsigned char)*s++;
@@ -78,13 +79,14 @@ void pr(const char* s) {
                 ansi_state = 1;
                 continue;
             }
+            b[cur++] = (current_color << 8) | c;
+            
             if ((unsigned int)cur >= 2000) {
                 p = cur;
                 scroll();
                 cur = p;
                 b = (volatile unsigned short*)VGA;
             }
-            b[cur++] = (current_color << 8) | c;
         } else if (ansi_state == 1) {
             if (c == '[') {
                 ansi_state = 2;
@@ -96,15 +98,11 @@ void pr(const char* s) {
             if (c >= '0' && c <= '9') {
                 ansi_num = (ansi_num * 10) + (c - '0');
             } else if (c == 'm') {
-                if (ansi_num == 0) current_color = 0x07;
-                else if (ansi_num == 30) current_color = 0x00;
-                else if (ansi_num == 31) current_color = 0x04;
-                else if (ansi_num == 32) current_color = 0x02;
-                else if (ansi_num == 33) current_color = 0x06;
-                else if (ansi_num == 34) current_color = 0x01;
-                else if (ansi_num == 35) current_color = 0x05;
-                else if (ansi_num == 36) current_color = 0x03;
-                else if (ansi_num == 37) current_color = 0x07;
+                if (ansi_num == 0) {
+                    current_color = 0x07;
+                } else if (ansi_num >= 30 && ansi_num <= 37) {
+                    current_color = ansi_vga_map[ansi_num - 30];
+                }
                 ansi_state = 0;
             } else {
                 ansi_state = 0;
