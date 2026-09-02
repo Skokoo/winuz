@@ -25,11 +25,10 @@
 #include "../io.h"
 #include "../vga.h"
 #include "../vfs.h"
-#include "root.h"
 
 char cmd_buffer[256];
 unsigned int cmd_idx = 0;
-unsigned char r_dev = 0;
+volatile unsigned char r_dev = 0;
 
 static inline int m_str_cmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) {
@@ -38,6 +37,8 @@ static inline int m_str_cmp(const char* s1, const char* s2) {
     }
     return *(unsigned char*)s1 - *(unsigned char*)s2;
 }
+
+#include "root.h"
 
 static inline unsigned int hash_fnv1a(const char* str, unsigned int max_len) {
     unsigned int hash = 0x811C9DC5;
