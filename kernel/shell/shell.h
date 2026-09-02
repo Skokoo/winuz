@@ -224,7 +224,6 @@ static inline void execute_command(void) {
     }
 
     cmd_idx = 0;
-    pr("> ");
 }
 
 #endif
