@@ -43,20 +43,19 @@ volatile unsigned char ring_buffer[256];
 volatile unsigned int ring_head = 0;
 volatile unsigned int ring_tail = 0;
 volatile unsigned char r_dev = 0;
-volatile unsigned char r_wait = 0;
 
-void enqueue_scancode(unsigned char code) {
-    unsigned int next = (ring_head + 1) % 256;
+static inline void enqueue_scancode(unsigned char code) {
+    unsigned int next = (ring_head + 1) & 255;
     if (next != ring_tail) {
         ring_buffer[ring_head] = code;
         ring_head = next;
     }
 }
 
-unsigned char dequeue_scancode(void) {
+static inline unsigned char dequeue_scancode(void) {
     if (ring_head == ring_tail) return 0;
     unsigned char code = ring_buffer[ring_tail];
-    ring_tail = (ring_tail + 1) % 256;
+    ring_tail = (ring_tail + 1) & 255;
     return code;
 }
 
@@ -64,9 +63,8 @@ void kmain(void) {
     init();
     volatile unsigned short* vga_b = (volatile unsigned short*)VGA;
 
-    unsigned long long* b64 = (unsigned long long*)VGA;
     unsigned long long cv = 0x0720072007200720ULL;
-    for (int i = 0; i < 500; i++) b64[i] = cv;
+    mset64((void*)VGA, cv, 500);
 
     root.file_count = 0;
 
@@ -145,12 +143,9 @@ void kmain(void) {
                 }
             }
         }
-
-        if (proc_active) {
-            loop_counter++;
-            if (loop_counter % 5000000 == 0) {
-                pr(".");
-            }
+                
+        if (proc_active && ((++loop_counter & 0x3FFFFF) == 0)) {
+            pr(".");
         }
 
         __asm__ volatile ("pause");
