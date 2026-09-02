@@ -25,7 +25,7 @@
 #include "../io.h"
 #include "../vga.h"
 #include "../vfs.h"
-#include "shell/root.h"
+#include "root.h"
 
 char cmd_buffer[256];
 unsigned int cmd_idx = 0;
