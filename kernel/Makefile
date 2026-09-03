@@ -1,19 +1,19 @@
 CC = clang -target x86_64-pc-elf
 LD = ld.lld
-CFLAGS = -Wall -Wextra -Werror -O3 -ffreestanding -mno-red-zone -fno-exceptions
-LDFLAGS = -T linker.ld -nostdlib
+CFLAGS = -Wall -Wextra -Werror -Oz -ffreestanding -mno-red-zone -fno-exceptions -fno-asynchronous-unwind-tables
+LDFLAGS = -T linker.ld -nostdlib --oformat=binary --strip-all
 
 all: winux.bin
 
 winux.bin: kernel.o
-	$(LD) $(LDFLAGS) kernel.o -o winuz.elf
-	llvm-objcopy -O binary winuz.elf winuz.bin
+	$(LD) $(LDFLAGS) kernel.o -o winux.bin
+	rm -f kernel.o
 
-kernel.o: kernel.c io.h paging.h vfs.h vga.h
+kernel.o: kernel.c io.h paging.h vfs.h vga.h shell/shell.h shell/root.h
 	$(CC) $(CFLAGS) -c kernel.c -o kernel.o
 
 run: winux.bin
-	qemu-system-x86_64 -kernel winuz.bin
+	qemu-system-x86_64 -kernel winux.bin -m 64M
 
 clean:
-	rm -f *.o *.bin
+	rm -f *.o winux.bin
