@@ -24,7 +24,7 @@
 
 #include "io.h"
 
-define VGA 0xB8000
+#define VGA 0xB8000
 
 int p = 0;
 unsigned char current_color = 0x0A;
