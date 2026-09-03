@@ -30,7 +30,7 @@ char cmd_buffer[256];
 unsigned int cmd_idx = 0;
 extern volatile unsigned char r_dev;
 
-static inline int m_str_cmp(const char* s1, const char* s2) {
+__attribute__((always_inline)) static inline int m_str_cmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) {
         s1++;
         s2++;
@@ -40,7 +40,19 @@ static inline int m_str_cmp(const char* s1, const char* s2) {
 
 #include "root.h"
 
-static inline unsigned int hash_fnv1a(const char* str, unsigned int max_len) {
+static inline struct file* find_file_node(const char* name) {
+    struct file* file_ptr = root.files;
+    const struct file* const end_ptr = root.files + root.file_count;
+    while (file_ptr < end_ptr) {
+        if (m_str_cmp(file_ptr->name, name) == 0) {
+            return file_ptr;
+        }
+        file_ptr++;
+    }
+    return (void*)0;
+}
+
+__attribute__((always_inline)) static inline unsigned int hash_fnv1a(const char* str, unsigned int max_len) {
     unsigned int hash = 0x811C9DC5;
     for (unsigned int i = 0; i < max_len; i++) {
         if (str[i] == '\0' || str[i] == ' ') break;
@@ -83,7 +95,7 @@ static inline void execute_command(void) {
                 pr("[sys] Directory is empty.");
             } else {
                 struct file* file_ptr = root.files;
-                struct file* end_ptr = root.files + root.file_count;
+                const struct file* const end_ptr = root.files + root.file_count;
 
                 while (file_ptr < end_ptr) {
                     pr(file_ptr->name);
@@ -141,21 +153,11 @@ static inline void execute_command(void) {
 
         case 0x70EC43EF:           
             if (cmd_idx > 5) {
-                char* target_dir = &cmd_buffer[5];
-                int found = 0;
-                struct file* file_ptr = root.files;
-                struct file* end_ptr = root.files + root.file_count;
-
-                while (file_ptr < end_ptr) {
-                    if (file_ptr->is_dir && m_str_cmp(file_ptr->name, target_dir) == 0) {
-                        pr("[sys] Moved to directory: ");
-                        pr(file_ptr->name);
-                        found = 1;
-                        break;
-                    }
-                    file_ptr++;
-                }
-                if (!found) {
+                const struct file* const target = find_file_node(&cmd_buffer[5]);
+                if (target && target->is_dir) {
+                    pr("[sys] Moved to directory: ");
+                    pr(target->name);
+                } else {
                     pr("[sys] Directory not found.");
                 }
             } else {
@@ -166,26 +168,17 @@ static inline void execute_command(void) {
 
         case 0xB67AA316:
             if (cmd_idx > 7) {
-                char* target_file = &cmd_buffer[7];
-                int found = 0;
-                struct file* file_ptr = root.files;
-                struct file* end_ptr = root.files + root.file_count;
-
-                while (file_ptr < end_ptr) {
-                    if (m_str_cmp(file_ptr->name, target_file) == 0) {
-                        found = 1;                       
-                        struct file* next_file = file_ptr + 1;
-                        while (next_file < end_ptr) {
-                            *file_ptr = *next_file;
-                            file_ptr++;
-                            next_file++;
-                        }
-                        root.file_count--;                       
-                        break;
+                struct file* file_ptr = find_file_node(&cmd_buffer[7]);
+                if (file_ptr) {
+                    const struct file* const end_ptr = root.files + root.file_count;
+                    struct file* next_file = file_ptr + 1;
+                    while (next_file < end_ptr) {
+                        *file_ptr = *next_file;
+                        file_ptr++;
+                        next_file++;
                     }
-                    file_ptr++;
-                }
-                if (!found) {
+                    root.file_count--;                       
+                } else {
                     pr("[sys] Object not found.");
                 }
             } else {
