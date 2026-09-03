@@ -19,16 +19,15 @@
 
 */
 
-__attribute__((section(".text"))) 
+__attribute__((section(".multiboot"))) 
 const unsigned int multiboot_header[] = {
-    0x1BADB002,               
-    0x00010003,               
-    -(0x1BADB002 + 0x00010003),
-    0x00100000,               
-    0x00100000,               
-    0x00000000,               
-    0x00000000,               
-    0x00100000                
+    0xE85250D6,                
+    0,                         
+    16,                        
+    -(0xE85250D6 + 0 + 16),    
+    0,                         
+    0,                         
+    8                          
 };
 
 #include "io.h"
