@@ -19,7 +19,7 @@
 
 */
 
-__attribute__((section(".multiboot"))) 
+__attribute__((section(".multiboot"), used)) 
 const unsigned int multiboot_header[] = {
     0xE85250D6,                
     0,                         
