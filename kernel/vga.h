@@ -24,93 +24,71 @@
 
 #include "io.h"
 
-#define VGA 0xB8000
-
 int p = 0;
 unsigned char current_color = 0x0A;
 unsigned char ansi_state = 0;
 unsigned int ansi_num = 0;
 
+static inline void putc_serial(char c) {
+    unsigned short port_status = 0x3FD;
+    unsigned char status;
+    
+    do {
+        __asm__ volatile (
+            "inb %1, %0"
+            : "=a"(status)
+            : "Nd"(port_status)
+        );
+    } while ((status & 0x20) == 0);
+
+    unsigned short port_data = 0x3F8;
+    __asm__ volatile (
+        "outb %0, %1"
+        :
+        : "a"((unsigned char)c), "Nd"(port_data)
+    );
+}
+
 void mv(int pos) {
     if ((unsigned int)pos >= 2000) return;
-    outb(0x3D4, 0x0F); outb(0x3D5, (unsigned char)(pos & 0xFF));
-    outb(0x3D4, 0x0E); outb(0x3D5, (unsigned char)((pos >> 8) & 0xFF));
+    static unsigned char is_init = 0;
+    if (__builtin_expect(!is_init, 0)) {
+        unsigned short ports[] = {0x3F9, 0x3FB, 0x3F8, 0x3F9, 0x3FB, 0x3FA, 0x3FC};
+        unsigned char vals[]   = {0x00,  0x80,  0x01,  0x00,  0x03,  0xC7,  0x0B};
+
+        for (int i = 0; i < 7; i++) {
+            __asm__ volatile (
+                "outb %0, %1"
+                :
+                : "a"(vals[i]), "Nd"(ports[i])
+            );
+        }
+        is_init = 1;
+    }
 }
 
 void scroll(void) {
-    void* dest = (void*)VGA;
-    const void* src = (const void*)(VGA + (80 * 2));
-    mcpy64(dest, src, (24 * 80 * 2) / 8);
-
-    void* clear_line = (void*)(VGA + (24 * 80 * 2));
-    unsigned long long empty_val = 0x0720072007200720ULL;
-    mset64(clear_line, empty_val, (80 * 2) / 8);
-
-    p = 24 * 80;
+    putc_serial('\n');
+    putc_serial('\r');
 }
 
 void newline(void) {
-    p = ((p / 80) + 1) * 80;
-    if (p >= 2000) {
-        scroll();
-    }
-    mv(p);
+    putc_serial('\n');
+    putc_serial('\r');
 }
 
 void vga_backspace(void) {
-    if (p > 0) {
-        p--;
-        volatile unsigned short* b = (volatile unsigned short*)VGA;
-        b[p] = 0x0700;
-        mv(p);
-    }
+    putc_serial('\b');
+    putc_serial(' ');
+    putc_serial('\b');
 }
 
 void pr(const char* s) {
-    volatile unsigned short* b = (volatile unsigned short*)VGA;
-    int cur = p;
-    static const unsigned char ansi_vga_map[] = {0x00, 0x04, 0x02, 0x06, 0x01, 0x05, 0x03, 0x07};
-
+    if (__builtin_expect(s == 0, 0)) return;
+    
     while (*s) {
-        unsigned char c = (unsigned char)*s++;
-
-        if (ansi_state == 0) {
-            if (c == 0x1B) {
-                ansi_state = 1;
-                continue;
-            }
-            b[cur++] = (current_color << 8) | c;
-            
-            if ((unsigned int)cur >= 2000) {
-                p = cur;
-                scroll();
-                cur = p;
-                b = (volatile unsigned short*)VGA;
-            }
-        } else if (ansi_state == 1) {
-            if (c == '[') {
-                ansi_state = 2;
-                ansi_num = 0;
-            } else {
-                ansi_state = 0;
-            }
-        } else if (ansi_state == 2) {
-            if (c >= '0' && c <= '9') {
-                ansi_num = (ansi_num * 10) + (c - '0');
-            } else if (c == 'm') {
-                if (ansi_num == 0) {
-                    current_color = 0x07;
-                } else if (ansi_num >= 30 && ansi_num <= 37) {
-                    current_color = ansi_vga_map[ansi_num - 30];
-                }
-                ansi_state = 0;
-            } else {
-                ansi_state = 0;
-            }
-        }
+        putc_serial(*s++);
     }
-    p = cur;
-    mv(p);
 }
 
 #endif
