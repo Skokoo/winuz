@@ -45,15 +45,15 @@ volatile unsigned char r_dev = 0;
 
 static inline void enqueue_scancode(unsigned char code) {
     unsigned int next = (ring_head + 1) & 255;
-    if (next != ring_tail) {
-        ring_buffer[ring_head] = code;
+    if (__builtin_expect(next != ring_tail, 1)) {
+        ring_buffer[ring_head & 255] = code;
         ring_head = next;
     }
 }
 
 static inline unsigned char dequeue_scancode(void) {
     if (ring_head == ring_tail) return 0;
-    unsigned char code = ring_buffer[ring_tail];
+    unsigned char code = ring_buffer[ring_tail & 255];
     ring_tail = (ring_tail + 1) & 255;
     return code;
 }
@@ -64,6 +64,8 @@ void kmain(void) {
 
     unsigned long long cv = 0x0720072007200720ULL;
     mset64((void*)VGA, cv, 500);
+
+    mv(0);
 
     root.file_count = 0;
 
@@ -125,24 +127,27 @@ void kmain(void) {
                         continue;
                     }
 
-                    if (c < 128) {
+                    if (__builtin_expect(c < 128, 1)) {
                         char tgt = m[c];
                         if (tgt) {
                             if ((unsigned int)p >= 2000) p = 0;
                             if (!shift_pressed && tgt >= 'A' && tgt <= 'Z') {
                                 tgt = tgt + 32;
                             }
-                            if (cmd_idx < 254) {
+                            if (__builtin_expect(cmd_idx < 254, 1)) {
                                 cmd_buffer[cmd_idx++] = tgt;
                             }
+                            
                             vga_b[p++] = (current_color << 8) | (unsigned char)tgt;
-                            mv(p);
+                            
+                            char stream[2] = {tgt, 0};
+                            pr(stream);
                         }
                     }
                 }
             }
         }
-                
+
         if (proc_active && ((++loop_counter & 0x3FFFFF) == 0)) {
             pr(".");
         }
