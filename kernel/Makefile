@@ -5,7 +5,7 @@ LDFLAGS = -T linker.ld -nostdlib --oformat=binary --strip-all
 
 all: winuz.bin
 
-winux.bin: kernel.o
+winuz.bin: kernel.o
 	$(LD) $(LDFLAGS) kernel.o -o winuz.bin
 	rm -f kernel.o
 
