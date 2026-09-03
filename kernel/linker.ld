@@ -6,6 +6,7 @@ SECTIONS
 
     .text : ALIGN(4)
     {
+        KEEP(*(.multiboot))
         *(.text)
     }
 
@@ -24,7 +25,7 @@ SECTIONS
         *(COMMON)
         *(.bss)
     }
-    
+
     /DISCARD/ :
     {
         *(.comment)
