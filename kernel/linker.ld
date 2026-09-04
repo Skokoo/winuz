@@ -1,4 +1,4 @@
-ENTRY(kmain)
+ENTRY(_m_start)
 
 SECTIONS
 {
@@ -6,6 +6,8 @@ SECTIONS
 
     .text : ALIGN(4)
     {
+        KEEP(*(.mbr))
+        KEEP(*(.m2))
         KEEP(*(.multiboot))
         *(.text)
     }
