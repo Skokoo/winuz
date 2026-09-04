@@ -37,7 +37,6 @@ const unsigned int multiboot_header[] = {
 #include "shell/shell.h"
 
 volatile unsigned char proc_active = 0;
-
 volatile unsigned char ring_buffer[256];
 volatile unsigned int ring_head = 0;
 volatile unsigned int ring_tail = 0;
@@ -58,17 +57,17 @@ static inline unsigned char dequeue_scancode(void) {
     return code;
 }
 
-void kmain(void) {
+void kmain(unsigned int magic1, unsigned int magic2) {
+    if (__builtin_expect(magic1 != 1686005835, 0)) { while(1); }
+    if (__builtin_expect(magic2 != 26985, 0)) { while(1); }
+
     init();
     volatile unsigned short* vga_b = (volatile unsigned short*)VGA;
-
     unsigned long long cv = 0x0720072007200720ULL;
     mset64((void*)VGA, cv, 500);
-
     mv(0);
 
     root.file_count = 0;
-
     pr("yey, kernel.");
     newline();
     newline();
@@ -90,68 +89,60 @@ void kmain(void) {
     while (1) {
         unsigned char status = inb(0x64);
         if (status & 0x01) {
-            unsigned char code = inb(0x60);
-            enqueue_scancode(code);
+            enqueue_scancode(inb(0x60));
         }
 
         unsigned char c = dequeue_scancode();
-        if (c != 0) {
-            if (c == 0x1D) ctrl_pressed = 1;
-            else if (c == 0x9D) ctrl_pressed = 0;
-            else if (c == 0x2A || c == 0x36) shift_pressed = 1;
-            else if (c == 0xAA || c == 0xB6) shift_pressed = 0;
+        
+        if (c == 0) {
+            if (proc_active && ((++loop_counter & 0x3FFFFF) == 0)) pr(".");
+            __asm__ volatile ("pause");
+            continue;
+        }
 
-            if (!(c & 0x80)) {
-                if (ctrl_pressed && c == 0x2E) {
-                    if (proc_active) {
-                        proc_active = 0;
-                        newline();
-                        pr("[sig] Keyboard Interrupted.");
-                        newline();
-                        pr("> ");
-                    }
-                    continue;
-                }             
+        if (c == 0x1D) ctrl_pressed = 1;
+        if (c == 0x9D) extern ctrl_pressed = 0;
+        if (c == 0x2A || c == 0x36) shift_pressed = 1;
+        if (c == 0xAA || c == 0xB6) shift_pressed = 0;
 
-                if (c == 0x1C) {
-                    execute_command();
-                    continue;
-                }
+        if (c & 0x80) continue;
 
-                if (!proc_active) {
-                    if (c == 0x0E) {
-                        if (cmd_idx > 0) {
-                            cmd_idx--;
-                            vga_backspace();
-                        }
-                        continue;
-                    }
+        if (ctrl_pressed && c == 0x2E && proc_active) {
+            proc_active = 0;
+            newline();
+            pr("[sig] Keyboard Interrupted.");
+            newline();
+            pr("> ");
+            continue;
+        }
+        if (ctrl_pressed && c == 0x2E) continue;
 
-                    if (__builtin_expect(c < 128, 1)) {
-                        char tgt = m[c];
-                        if (tgt) {
-                            if ((unsigned int)p >= 2000) p = 0;
-                            if (!shift_pressed && tgt >= 'A' && tgt <= 'Z') {
-                                tgt = tgt + 32;
-                            }
-                            if (__builtin_expect(cmd_idx < 254, 1)) {
-                                cmd_buffer[cmd_idx++] = tgt;
-                            }
-                            
-                            vga_b[p++] = (current_color << 8) | (unsigned char)tgt;
-                            
-                            char stream[2] = {tgt, 0};
-                            pr(stream);
-                        }
-                    }
-                }
+        if (c == 0x1C) {
+            execute_command();
+            continue;
+        }
+
+        if (proc_active) continue;
+
+        if (c == 0x0E) {
+            if (cmd_idx > 0) {
+                cmd_idx--;
+                vga_backspace();
             }
+            continue;
         }
 
-        if (proc_active && ((++loop_counter & 0x3FFFFF) == 0)) {
-            pr(".");
-        }
+        if (__builtin_expect(c >= 128, 0)) continue;
 
-        __asm__ volatile ("pause");
+        char tgt = m[c];
+        if (!tgt) continue;
+
+        if ((unsigned int)p >= 2000) p = 0;
+        if (!shift_pressed && tgt >= 'A' && tgt <= 'Z') tgt += 32;
+        if (__builtin_expect(cmd_idx < 254, 1)) cmd_buffer[cmd_idx++] = tgt;
+
+        vga_b[p++] = (current_color << 8) | (unsigned char)tgt;
+        char stream[2] = {tgt, 0};
+        pr(stream);
     }
 }
