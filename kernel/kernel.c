@@ -101,7 +101,7 @@ void kmain(unsigned int magic1, unsigned int magic2) {
         }
 
         if (c == 0x1D) ctrl_pressed = 1;
-        if (c == 0x9D) extern ctrl_pressed = 0;
+        if (c == 0x9D) ctrl_pressed = 0;
         if (c == 0x2A || c == 0x36) shift_pressed = 1;
         if (c == 0xAA || c == 0xB6) shift_pressed = 0;
 
