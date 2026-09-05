@@ -62,9 +62,6 @@ void kmain(unsigned int magic1, unsigned int magic2) {
     if (__builtin_expect(magic2 != 26985, 0)) { while(1); }
 
     init();
-    volatile unsigned short* vga_b = (volatile unsigned short*)VGA;
-    unsigned long long cv = 0x0720072007200720ULL;
-    mset64((void*)VGA, cv, 500);
     mv(0);
 
     root.file_count = 0;
