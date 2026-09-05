@@ -19,15 +19,15 @@
 
 */
 
-__attribute__((section(".multiboot"), used)) 
+__attribute__((section(".multiboot"), used))
 const unsigned int multiboot_header[] = {
-    0xE85250D6,                
-    0,                         
-    16,                        
-    -(0xE85250D6 + 0 + 16),    
-    0,                         
-    0,                         
-    8                          
+    0xE85250D6,
+    0,
+    16,
+    -(0xE85250D6 + 0 + 16),
+    0,
+    0,
+    8
 };
 
 #include "io.h"
@@ -65,7 +65,7 @@ void kmain(unsigned int magic1, unsigned int magic2) {
     mv(0);
 
     root.file_count = 0;
-    pr("yey, kernel.");
+    pr("yey, kernel");
     newline();
     newline();
     pr("> ");
@@ -107,7 +107,7 @@ void kmain(unsigned int magic1, unsigned int magic2) {
         if (ctrl_pressed && c == 0x2E && proc_active) {
             proc_active = 0;
             newline();
-            pr("keyboard Interrupted.");
+            pr("keyboard Interrupted");
             newline();
             pr("> ");
             continue;
@@ -130,7 +130,6 @@ void kmain(unsigned int magic1, unsigned int magic2) {
         }
 
         if (__builtin_expect(c >= 128, 0)) continue;
-
         char tgt = m[c];
         if (!tgt) continue;
 
