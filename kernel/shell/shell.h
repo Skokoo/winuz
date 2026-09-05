@@ -138,7 +138,7 @@ static inline void execute_command(void) {
 
                 vendor_string[12] = '\0';
 
-                pr("[sys] CPU vendor string: ");
+                pr("cpu vendor string: ");
                 pr(vendor_string);
             }
             newline();
