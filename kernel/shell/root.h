@@ -30,11 +30,11 @@ extern volatile unsigned char r_dev;
 static inline void r_toggle(const char* param) {
     if (m_str_cmp(param, "YES") == 0) {
         r_dev = 1;
-        pr("[sys] Entering root mode, you can do anything to this kernel.");
+        pr("entering ROOT mode, you can do anything to this kernel.");
         newline();
         pr("Proceed at your own risk.");       
     } else {
-        pr("[sys] Invalid parameter. Usage: ROOTED YES");
+        pr("invalid parameter.");
     }
     newline();
 }
