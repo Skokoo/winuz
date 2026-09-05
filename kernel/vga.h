@@ -25,7 +25,7 @@
 #include "io.h"
 
 int p = 0;
-unsigned char current_color = 0x0A;
+unsigned char current_color = 0x1F;
 unsigned char ansi_state = 0;
 unsigned int ansi_num = 0;
 
