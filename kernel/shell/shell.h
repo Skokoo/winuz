@@ -92,7 +92,7 @@ static inline void execute_command(void) {
 
         case 0xE710FA4A:
             if (root.file_count == 0) {
-                pr("[sys] Directory is empty.");
+                pr("directory is empty.");
             } else {
                 struct file* file_ptr = root.files;
                 const struct file* const end_ptr = root.files + root.file_count;
@@ -155,13 +155,13 @@ static inline void execute_command(void) {
             if (cmd_idx > 5) {
                 const struct file* const target = find_file_node(&cmd_buffer[5]);
                 if (target && target->is_dir) {
-                    pr("[sys] Moved to directory: ");
+                    pr("moved to directory: ");
                     pr(target->name);
                 } else {
-                    pr("[sys] Directory not found.");
+                    pr("directory not found.");
                 }
             } else {
-                pr("[sys] Usage: GOTO [dir_name]");
+                pr("usage: GOTO [dir_name]");
             }
             newline();
             break;
@@ -179,23 +179,23 @@ static inline void execute_command(void) {
                     }
                     root.file_count--;                       
                 } else {
-                    pr("[sys] Object not found.");
+                    pr("object not found.");
                 }
             } else {
-                pr("[sys] Usage: REMOVE [file_name]");
+                pr("usage: REMOVE [file_name]");
             }
             newline();
             break;
 
         case 0x5B5E05AC:
             if (r_dev == 1) {
-                pr("[sys] System is already running in ROOT mode.");
+                pr("system is already running in ROOT mode.");
                 newline();
             } else {
                 if (cmd_idx > 7) {
                     r_toggle(&cmd_buffer[7]);
                 } else {
-                    pr("[sys] Usage: ROOTED YES");
+                    pr("usage: ROOTED YES");
                     newline();
                 }
             }
@@ -211,7 +211,7 @@ static inline void execute_command(void) {
             break;
 
         default:
-            pr("[sys] Unknown command: ");
+            pr("unknown command: ");
             pr(cmd_buffer);
             newline();
             break;
