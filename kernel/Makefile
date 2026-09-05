@@ -5,8 +5,16 @@ O = boot/multiboot.o
 all: check_deps clean winuz.iso
 
 check_deps:
+	@echo -e "\033[1mChecking environment...\033[0m"
+	if [ -d "/data/data/com.termux" ] && [ "$$PREFIX" != "" ] && [ ! -d "/usr/bin" ]; then \
+		echo -e "\033[1;31mbad: termux environment detected\033[0m"; \
+		echo -e "\033[1mtermux doesn't have grub.\033[0m"; \
+		echo -e "\033[1;33muse PRoot (proot-distro) if you want to proceed.\033[0m"; \
+		exit 1; \
+	fi
+	@echo -e "\033[1mok, valid Linux environment found\033[0m"
 	@echo -e "\033[1mChecking packages...\033[0m"
-	for pkg in \
+	@for pkg in \
 		"mkdir:coreutils mkdir missing" "cp:coreutils cp missing" "rm:coreutils rm missing" \
 		"echo:shell echo missing" "grep:grep is not installed" "file:file utility missing" \
 		"readelf:readelf utility missing" "objdump:objdump utility missing" "nm:nm utility missing" \
@@ -18,7 +26,7 @@ check_deps:
 		command -v $$cmd >/dev/null 2>&1 || (echo -e "\033[1mbad: $$err\033[0m" && exit 1); \
 		echo -e "\033[1mok, $$cmd found\033[0m"; \
 	done
-	@echo -e "\033[1mok\033[0m"
+	@echo -e "\033[1mok, all packages verified\033[0m"
 
 winuz.iso: winuz.bin
 	grub-file --is-x86-multiboot2 winuz.bin || (echo -e "\033[1mbad: invalid multiboot2 header\033[0m" && exit 1)
@@ -76,4 +84,4 @@ kernel.o: kernel.c
 
 clean:
 	rm -rf *.o *.bin *.iso iso boot/*.o
-	@echo -e "\033[1mok, workspace cleaned\033[0m"                                                           
+	@echo -e "\033[1mok, workspace cleaned\033[0m"                                     
