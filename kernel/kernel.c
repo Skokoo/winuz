@@ -107,7 +107,7 @@ void kmain(unsigned int magic1, unsigned int magic2) {
         if (ctrl_pressed && c == 0x2E && proc_active) {
             proc_active = 0;
             newline();
-            pr("[sig] Keyboard Interrupted.");
+            pr("keyboard Interrupted.");
             newline();
             pr("> ");
             continue;
