@@ -1,19 +1,24 @@
-CFLAGS = -Wall -Wextra -Werror -Oz -ffreestanding -mno-red-zone -fno-exceptions -fno-asynchronous-unwind-tables
-LDFLAGS = -m elf_x86_64 -T linker.ld -nostdlib
+CFLAGS = -Wall -Wextra -Werror -Oz -ffreestanding -mno-red-zone \
+         -fno-exceptions -fno-asynchronous-unwind-tables \
+         -fno-pic -fno-pie -fno-stack-protector -ffunction-sections -fdata-sections
+
+LDFLAGS = -m elf_x86_64 -T linker.ld -nostdlib --gc-sections
 O = boot/multiboot.o
+
+.PHONY: all check_deps clean run
 
 all: check_deps clean winuz.iso
 
 check_deps:
-	@echo -e "\033[1mChecking environment...\033[0m"
-	if [ -d "/data/data/com.termux" ] && [ "$$PREFIX" != "" ] && [ ! -d "/usr/bin" ]; then \
+	@echo -e "\033[1mchecking environment...\033[0m"
+	@if [ -d "/data/data/com.termux" ] && [ "$$PREFIX" != "" ] && [ ! -d "/usr/bin" ]; then \
 		echo -e "\033[1;31mbad: termux environment detected\033[0m"; \
 		echo -e "\033[1mtermux doesn't have grub.\033[0m"; \
 		echo -e "\033[1;33muse PRoot (proot-distro) if you want to proceed.\033[0m"; \
 		exit 1; \
 	fi
-	@echo -e "\033[1mok, valid Linux environment found\033[0m"
-	@echo -e "\033[1mChecking packages...\033[0m"
+	@echo -e "\033[1mok, valid linux environment found\033[0m"
+	@echo -e "\033[1mchecking packages...\033[0m"
 	@for pkg in \
 		"mkdir:coreutils mkdir missing" "cp:coreutils cp missing" "rm:coreutils rm missing" \
 		"echo:shell echo missing" "grep:grep is not installed" "file:file utility missing" \
@@ -21,6 +26,7 @@ check_deps:
 		"grub-file:grub is not installed" "grub-mkrescue:grub utilities missing" \
 		"xorriso:xorriso is not installed" "mtools:mtools is not installed" \
 		"nasm:nasm is not installed" "clang:clang is not installed" "ld.lld:lld linker missing" \
+		"qemu-system-x86_64:qemu emulator missing" \
 	; do \
 		cmd=$${pkg%%:*}; err=$${pkg#*:}; \
 		command -v $$cmd >/dev/null 2>&1 || (echo -e "\033[1mbad: $$err\033[0m" && exit 1); \
@@ -82,6 +88,10 @@ kernel.o: kernel.c
 	clang -target x86_64-unknown-none $(CFLAGS) -v -fverbose-asm -c kernel.c -o kernel.o
 	@echo -e "\033[1mok, kernel.c compiled\033[0m"
 
+run: winuz.iso
+	@echo -e "\033[1mlaunching winuz kernel in qemu (serial output modes)...\033[0m"
+	qemu-system-x86_64 -cdrom winuz.iso -nographic
+
 clean:
 	rm -rf *.o *.bin *.iso iso boot/*.o
-	@echo -e "\033[1mok, workspace cleaned\033[0m"                                     
+	@echo -e "\033[1mok, workspace cleaned\033[0m"                  
