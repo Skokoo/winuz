@@ -6,7 +6,7 @@ all: check_deps clean winuz.iso
 
 check_deps:
 	@echo -e "\033[1mChecking packages...\033[0m"
-	@for pkg in \
+	for pkg in \
 		"mkdir:coreutils mkdir missing" "cp:coreutils cp missing" "rm:coreutils rm missing" \
 		"echo:shell echo missing" "grep:grep is not installed" "file:file utility missing" \
 		"readelf:readelf utility missing" "objdump:objdump utility missing" "nm:nm utility missing" \
