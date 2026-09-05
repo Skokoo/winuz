@@ -90,7 +90,7 @@ void kmain(unsigned int magic1, unsigned int magic2) {
         }
 
         unsigned char c = dequeue_scancode();
-        
+
         if (c == 0) {
             if (proc_active && ((++loop_counter & 0x3FFFFF) == 0)) pr(".");
             __asm__ volatile ("pause");
@@ -138,7 +138,6 @@ void kmain(unsigned int magic1, unsigned int magic2) {
         if (!shift_pressed && tgt >= 'A' && tgt <= 'Z') tgt += 32;
         if (__builtin_expect(cmd_idx < 254, 1)) cmd_buffer[cmd_idx++] = tgt;
 
-        vga_b[p++] = (current_color << 8) | (unsigned char)tgt;
         char stream[2] = {tgt, 0};
         pr(stream);
     }
