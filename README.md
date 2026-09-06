@@ -14,14 +14,16 @@ cd winuz/kernel
 # compile the iso
 make clean && make
 ```
-dont worry, the make execution loop is fast, even though the auditing logs will flood your terminal pipeline.
+dont worry, the make execution is fast, even though the auditing logs will flood your terminal pipeline.
+
+you should obtain .bin and .iso files once the execution is complete.
 
 ## community
 
-Contribution:
+contribution:
 
 **[.github/CONTRIBUTING.md](.github/CONTRIBUTING.md)**
 
-Code of conduct:
+code of conduct:
 
 **[.github/CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md)**
