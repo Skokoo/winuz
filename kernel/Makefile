@@ -80,7 +80,7 @@ winuz.iso: winuz.bin
 	@echo -e "\033[1;32mextracting target system layout.\033[0m"
 	@file winuz.bin >/dev/null 2>&1
 	@echo -e "\033[32mok, architecture verification block confirmed\033[0m"
-	@echo -e "\033[1;32mcounting undefined symbols...\033[0m"
+	@echo -e "\033[1;32mcounting undefined symbols.\033[0m"
 	@if [ $$(nm -u winuz.bin | wc -l) -ne 0 ]; then \
 		echo -e "\033[1;31mbad: external undefined runtime symbols found\033[0m" && exit 1; \
 	fi
@@ -120,8 +120,14 @@ winuz.iso: winuz.bin
 	@objdump -d winuz.bin | grep -E -q "xmm|ymm" && (echo -e "\033[1;31mbad: compiler injected uninitialized vector registers\033[0m" && exit 1) || true
 	@echo -e "\033[32mok, no vector register instructions detected\033[0m"
 	@echo -e "\033[1;32mscanning for 32bit registers.\033[0m"
-	@objdump -d winuz.bin | grep -E -q "\b(eax|ebx|ecx|edx|esi|edi|ebp|esp|r[0-9]+d)\b" && (echo -e "\033[1;33mwarning, compiler or assembly utilized legacy 32bit registers. Pls note that this is a warning, not an error.\033[0m") || true
+	@objdump -d winuz.bin | grep -E -q "\b(eax|ebx|ecx|edx|esi|edi|ebp|esp|r[0-9]+d)\b" && (echo -e "\033[1;33mwarning, compiler or assembly utilized legacy 32bit registers. Pls note warning ≠ error.\033[0m") || true
 	@echo -e "\033[32mok, execution instructions audited against 32bit register truncation.\033[0m"
+	@echo -e "\033[1;32mscanning for dynamic instruction anomalies and NOP sled overflows.\033[0m"
+	@objdump -d winuz.bin | grep -q "90 90 90 90" && (echo -e "\033[1;31mbad: abnormal padding structure detected inside text segments\033[0m" && exit 1) || true
+	@echo -e "\033[32mok, binary instructions structural payload layout safe\033[0m"
+	@echo -e "\033[1;32mauditing execution permission safety flags for data segments.\033[0m"
+	@readelf -S winuz.bin | grep -A 1 "\.rodata" | grep -q "X" && (echo -e "\033[1;31mbad: security compromise (.rodata segment permissions layout is executable)\033[0m" && exit 1) || true
+	@echo -e "\033[32mok, read only constants isolated from execution space\033[0m"
 	@echo -e "\033[1;32mauditing stack frame allocation.\033[0m"
 	@objdump -d winuz.bin | grep -E "sub.*rsp" | awk '{print $$3}' | grep -E -q "0x[4-9][0-9a-fA-F]{2}|0x[a-fA-F0-9]{3,}" && (echo -e "\033[1;31mbad: oversized local stack frame allocation detected\033[0m" && exit 1) || true
 	@echo -e "\033[32mok, stack frame allocations within safe freestanding metrics\033[0m"
