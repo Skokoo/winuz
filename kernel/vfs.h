@@ -88,7 +88,7 @@ int storage_explore(unsigned int lba_root_dir) {
 
         const char* name_part = (const char*)entry_ptr;
         int i = 0;
-        while (i < 8 && name_part[i] != ' ') {
+        while (i < 8 && name_part[i] != ' ' && name_idx < 27) {
             f->name[name_idx++] = name_part[i++];
         }
 
@@ -96,7 +96,7 @@ int storage_explore(unsigned int lba_root_dir) {
             f->name[name_idx++] = '.';
             const char* ext_part = (const char*)(entry_ptr + 8);
             int j = 0;
-            while (j < 3 && ext_part[j] != ' ') {
+            while (j < 3 && ext_part[j] != ' ' && name_idx < 31) {
                 f->name[name_idx++] = ext_part[j++];
             }
             if (f->name[name_idx - 1] == '.') {
