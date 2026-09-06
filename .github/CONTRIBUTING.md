@@ -1,4 +1,4 @@
-# contributing to Winuz
+# contributing
 
 we welcome contributions to the winuz kernel. 
 
