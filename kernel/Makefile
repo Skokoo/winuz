@@ -38,7 +38,7 @@ check_deps:
 	done
 	@echo -e "\033[32mok, all packages verified\033[0m"
 	@echo -e "\033[1;32mchecking source code.\033[0m"
-	@for file in kernel.c io.h vga.h vfs.h paging.h boot/multiboot.asm shell/root.h shell/shell.h; do \
+	@for file in kernel.c linker.ld io.h vga.h vfs.h paging.h boot/multiboot.asm shell/root.h shell/shell.h; do \
 		if [ ! -f "$$file" ]; then \
 			echo -e "\033[33m$$file missing\033[0m"; \
 			if [ -d "../.git" ]; then \
