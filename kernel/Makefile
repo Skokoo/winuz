@@ -50,6 +50,21 @@ check_deps:
 		fi; \
 	done
 	@echo -e "\033[32mok, all source code not missing\033[0m"
+	@echo -e "\033[1;32mchecking root status.\033[0m"
+	@current_limit=$$(ulimit -n); \
+	if [ "$$current_limit" = "unlimited" ]; then \
+		echo -e "\033[32mok, host shell file descriptors are already unlimited\033[0m"; \
+	elif [ "$$current_limit" -ge 6000 ]; then \
+		echo -e "\033[32mhost shell file descriptors are sufficient ($$current_limit)\033[0m"; \
+	else \
+		if [ $$(id -u) -eq 0 ]; then \
+			echo -e "\033[32mok, root privileges active, expanding host shell file descriptors.\033[0m"; \
+			ulimit -n 6000; \
+			echo -e "\033[32mulimit resource expanded into 6000 in this session\033[0m"; \
+		else \
+			echo -e "\033[32mstandard user context initialized\033[0m"; \
+		fi; \
+	fi
 winuz.iso: winuz.bin
 	@echo -e "\033[1;32mchecking multiboot2 header.\033[0m"
 	@grub-file --is-x86-multiboot2 winuz.bin >/dev/null 2>&1 || (echo -e "\033[1;31mbad: invalid multiboot2 header\033[0m" && exit 1)
@@ -79,6 +94,17 @@ winuz.iso: winuz.bin
 	@echo -e "\033[1;32mscanning for write permissions inside executable sections.\033[0m"
 	@readelf -S winuz.bin | grep -A 1 "\.text" | grep -E -q "W" && (echo -e "\033[1;31mbad: executable section possesses dangerous write permissions\033[0m" && exit 1) || true
 	@echo -e "\033[32mok, write-exclusive-or-execute parity validated\033[0m"
+	@echo -e "\033[1;32mscanning for dynamic interpreter sections.\033[0m"
+	@readelf -S winuz.bin | grep -q "\.interp" && (echo -e "\033[1;31mbad: dynamic interpreter section found inside static map\033[0m" && exit 1) || true
+	@echo -e "\033[32mok, zero dynamic interpreter artifacts discovered\033[0m"
+	@echo -e "\033[1;32mauditing payload binary word alignment metrics.\033[0m"
+	@if [ $$(expr $$(stat -c %s winuz.bin) % 4) -ne 0 ]; then \
+		echo -e "\033[1;31mbad: kernel payload is not 32bit word aligned\033[0m" && exit 1; \
+	fi
+	@echo -e "\033[32mok, payload word alignment parameters verified\033[0m"
+	@echo -e "\033[1;32mscanning for forbidden runtime relocation symbols.\033[0m"
+	@readelf -r winuz.bin 2>/dev/null | grep -E -q "R_X86_64_RELATIVE|R_X86_64_GLOB_DAT" && (echo -e "\033[1;31mbad: dynamic relocation artifact will trigger memory fault\033[0m" && exit 1) || true
+	@echo -e "\033[32mok, binary addresses locked for direct physical execution\033[0m"
 	@echo -e "\033[1;32mscanning for dynamic tables.\033[0m"
 	@readelf -S winuz.bin | grep -E -q "\.got|\.plt" && (echo -e "\033[1;31mbad: illegal dynamic tables found inside freestanding binary\033[0m" && exit 1) || true
 	@echo -e "\033[32mok, binar contains zero dynamic table artifacts\033[0m"
