@@ -166,7 +166,7 @@ boot/%.o: boot/%.asm
 	@echo -e "\033[32mok, multiboot.o section footprint verified\033[0m"
 
 kernel.o: kernel.c
- @echo -e "\033[1;32mcompiling.\033[0m"
+	@echo -e "\033[1;32mcompiling.\033[0m"
 	@clang -target x86_64-unknown-none $(CFLAGS) -c kernel.c -o kernel.o
 	@echo -e "\033[32mok, kernel.c compiled\033[0m"
 	@nm kernel.o | grep -E -q "memset|memcpy|memmove" && (echo -e "\033[1;31mbad: standard library pollution found in object file\033[0m" && exit 1) || true
