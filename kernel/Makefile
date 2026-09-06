@@ -93,6 +93,9 @@ winuz.iso: winuz.bin
 	@echo -e "\033[1;32mscanning for vector instructions.\033[0m"
 	@objdump -d winuz.bin | grep -E -q "xmm|ymm" && (echo -e "\033[1;31mbad: compiler injected uninitialized vector registers\033[0m" && exit 1) || true
 	@echo -e "\033[32mok, no vector register instructions detected\033[0m"
+	@echo -e "\033[1;32mscanning for 32bit registers.\033[0m"
+	@objdump -d winuz.bin | grep -E -q "\b(eax|ebx|ecx|edx|esi|edi|ebp|esp|r[0-9]+d)\b" && (echo -e "\033[1;33mwarning, compiler or assembly utilized legacy 32bit registers. Pls note that this is a warning, not an error.\033[0m") || true
+	@echo -e "\033[32mok, execution instructions audited against 32bit register truncation.\033[0m"
 	@echo -e "\033[1;32mauditing stack frame allocation.\033[0m"
 	@objdump -d winuz.bin | grep -E "sub.*rsp" | awk '{print $$3}' | grep -E -q "0x[4-9][0-9a-fA-F]{2}|0x[a-fA-F0-9]{3,}" && (echo -e "\033[1;31mbad: oversized local stack frame allocation detected\033[0m" && exit 1) || true
 	@echo -e "\033[32mok, stack frame allocations within safe freestanding metrics\033[0m"
