@@ -37,6 +37,19 @@ check_deps:
 		command -v $$cmd >/dev/null 2>&1 || (echo -e "\033[1;31mbad: $$err\033[0m" && exit 1); \
 	done
 	@echo -e "\033[32mok, all packages verified\033[0m"
+	@echo -e "\033[1;32mchecking source code.\033[0m"
+	@for file in kernel.c io.h vga.h vfs.h paging.h boot/multiboot.asm shell/root.h shell/shell.h; do \
+		if [ ! -f "$$file" ]; then \
+			echo -e "\033[33m$$file missing\033[0m"; \
+			if [ -d "../.git" ]; then \
+				echo -e "\033[1;32mrestoring $$file using git.\033[0m"; \
+				git checkout HEAD -- $$file >/dev/null 2>&1 && echo -e "\033[32mok, $$file restored\033[0m" || (echo -e "\033[1;31mbad, $$file missing\033[0m" && exit 1); \
+			else \
+				echo -e "\033[1;31mbad: $$file missing\033[0m" && exit 1; \
+			fi; \
+		fi; \
+	done
+	@echo -e "\033[32mok, all source code not missing\033[0m"
 winuz.iso: winuz.bin
 	@echo -e "\033[1;32mchecking multiboot2 header.\033[0m"
 	@grub-file --is-x86-multiboot2 winuz.bin >/dev/null 2>&1 || (echo -e "\033[1;31mbad: invalid multiboot2 header\033[0m" && exit 1)
@@ -153,6 +166,7 @@ boot/%.o: boot/%.asm
 	@echo -e "\033[32mok, multiboot.o section footprint verified\033[0m"
 
 kernel.o: kernel.c
+ @echo -e "\033[1;32mcompiling.\033[0m"
 	@clang -target x86_64-unknown-none $(CFLAGS) -c kernel.c -o kernel.o
 	@echo -e "\033[32mok, kernel.c compiled\033[0m"
 	@nm kernel.o | grep -E -q "memset|memcpy|memmove" && (echo -e "\033[1;31mbad: standard library pollution found in object file\033[0m" && exit 1) || true
