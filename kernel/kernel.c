@@ -135,7 +135,7 @@ void kmain(unsigned int magic1, unsigned int magic2) {
 
         if ((unsigned int)p >= 2000) p = 0;
         if (!shift_pressed && tgt >= 'A' && tgt <= 'Z') tgt += 32;
-        if (__builtin_expect(cmd_idx < 254, 1)) cmd_buffer[cmd_idx++] = tgt;
+        if (__builtin_expect(cmd_idx < 255, 1)) cmd_buffer[cmd_idx++] = tgt;
 
         char stream[2] = {tgt, 0};
         pr(stream);
