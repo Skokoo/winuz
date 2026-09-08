@@ -51,7 +51,7 @@ static inline unsigned char dequeue_scancode(void) {
     return code;
 }
 
-void kmain(unsigned int magic1, unsigned int magic2) {
+void kmain(unsigned int magic1, unsigned int magic2 __attribute__((unused))) {
     serial_init();
 
     if (__builtin_expect(magic1 != 0x36D76289, 0)) {
