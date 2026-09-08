@@ -1,7 +1,9 @@
 # winuz
 > Source code for the winuz kernel.
 
-winuz is a lightweight, fast, freestanding, monolithic 64bit x86_64 kernel. This kernel features an integrated synchronous execution context loop, and grants users primitive access to the kernel.
+winuz is a lightweight, fast, freestanding, monolithic 64bit x86_64 kernel. This kernel features an integrated synchronous execution context loop, and grants users primitive access to the kernel. 
+
+your hardware is the only speed limit.
 
 ## deployment & compilation
 
