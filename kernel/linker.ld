@@ -1,3 +1,4 @@
+
 ENTRY(_start)
 
 SECTIONS
@@ -14,12 +15,12 @@ SECTIONS
     { 
         *(.rodata .rodata.*) 
     }
-    
+
     .data : ALIGN(4K) 
     { 
         *(.data .data.*) 
     }
-    
+
     .bss : ALIGN(4K) 
     { 
         *(COMMON) 
