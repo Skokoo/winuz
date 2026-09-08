@@ -23,6 +23,7 @@
 #include "paging.h"
 #include "vfs.h"
 #include "vga.h"
+#include "idt.h"
 #include "shell/shell.h"
 
 volatile unsigned char proc_active = 0;
@@ -59,6 +60,7 @@ void kmain(unsigned int magic1, unsigned int magic2) {
         while(1) { __asm__ volatile ("hlt"); }
     }
 
+    idt_init();
     init();
 
     root.file_count = 0;
