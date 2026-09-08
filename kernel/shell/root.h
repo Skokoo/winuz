@@ -28,7 +28,7 @@
 extern volatile unsigned char r_dev;
 
 static inline void r_toggle(const char* param) {
-    if (m_str_cmp(param, "YES") == 0) {
+    if (m_str_ncmp(param, "YES") == 0) {
         r_dev = 1;
         pr("entering ROOT mode, you can do anything to this kernel.");
         newline();
