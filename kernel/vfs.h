@@ -42,7 +42,7 @@ static inline void ata_wait(void) {
     inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
 }
 
-static inline void ata_read_sector(unsigned int lba, unsigned short* buf) {
+static inline int ata_read_sector(unsigned int lba, unsigned short* buf) {
     outb(0x1F6, 0xE0 | ((lba >> 24) & 0x0F));
     outb(0x1F2, 1);
     outb(0x1F3, (unsigned char)lba);
@@ -50,7 +50,12 @@ static inline void ata_read_sector(unsigned int lba, unsigned short* buf) {
     outb(0x1F5, (unsigned char)(lba >> 16));
     outb(0x1F7, 0x20);
 
+    unsigned int timeout = 0;
     while (!(inb(0x1F7) & 0x08)) {
+        timeout++;
+        if (__builtin_expect(timeout > 10000000, 0)) {
+            return 0;
+        }
         __asm__ volatile ("pause");
     }
 
@@ -62,6 +67,7 @@ static inline void ata_read_sector(unsigned int lba, unsigned short* buf) {
         : "memory"
     );
     ata_wait();
+    return 1;
 }
 
 int storage_explore(unsigned int lba_root_dir) {
@@ -69,21 +75,25 @@ int storage_explore(unsigned int lba_root_dir) {
     unsigned char* byte_buf = (unsigned char*)sector_buf;
 
     root.file_count = 0;
-    ata_read_sector(lba_root_dir, sector_buf);
+    if (!ata_read_sector(lba_root_dir, sector_buf)) {
+        return -1;
+    }
 
     unsigned char* entry_ptr = byte_buf;
     const unsigned char* const end_entry_ptr = byte_buf + 512;
 
     while (entry_ptr < end_entry_ptr) {
         if (*entry_ptr == 0x00) break;
-        
+
         unsigned char attr = *(entry_ptr + 11);
         if (*entry_ptr == 0xE5 || attr == 0x0F) {
             entry_ptr += 32;
             continue;
         }
 
-        struct file* f = root.files + root.file_count;
+        if (root.file_count >= 64) break;
+
+        struct file* f = &root.files[root.file_count];
         int name_idx = 0;
 
         const char* name_part = (const char*)entry_ptr;
@@ -110,8 +120,6 @@ int storage_explore(unsigned int lba_root_dir) {
         f->size = *(unsigned int*)(entry_ptr + 28);
 
         root.file_count++;
-        if (root.file_count >= 64) break;
-
         entry_ptr += 32;
     }
     return root.file_count;
