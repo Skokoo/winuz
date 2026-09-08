@@ -19,17 +19,6 @@
 
 */
 
-__attribute__((section(".multiboot"), used))
-const unsigned int multiboot_header[] = {
-    0xE85250D6,
-    0,
-    16,
-    -(0xE85250D6 + 0 + 16),
-    0,
-    0,
-    8
-};
-
 #include "io.h"
 #include "paging.h"
 #include "vfs.h"
@@ -46,23 +35,31 @@ static inline void enqueue_scancode(unsigned char code) {
     unsigned int next = (ring_head + 1) & 255;
     if (__builtin_expect(next != ring_tail, 1)) {
         ring_buffer[ring_head & 255] = code;
+        __sync_synchronize();
         ring_head = next;
+        __sync_synchronize();
     }
 }
 
 static inline unsigned char dequeue_scancode(void) {
     if (ring_head == ring_tail) return 0;
     unsigned char code = ring_buffer[ring_tail & 255];
+    __sync_synchronize();
     ring_tail = (ring_tail + 1) & 255;
+    __sync_synchronize();
     return code;
 }
 
 void kmain(unsigned int magic1, unsigned int magic2) {
-    if (__builtin_expect(magic1 != 1686005835, 0)) { while(1); }
-    if (__builtin_expect(magic2 != 26985, 0)) { while(1); }
+    serial_init();
+
+    if (__builtin_expect(magic1 != 0x36D76289, 0)) {
+        pr("multiboot magic mismatch");
+        newline();
+        while(1) { __asm__ volatile ("hlt"); }
+    }
 
     init();
-    mv(0);
 
     root.file_count = 0;
     pr("yey, kernel");
@@ -75,12 +72,15 @@ void kmain(unsigned int magic1, unsigned int magic2) {
     unsigned long long loop_counter = 0;
 
     static const char m[128] = {
+        [0x02] = '1', [0x03] = '2', [0x04] = '3', [0x05] = '4', [0x06] = '5',
+        [0x07] = '6', [0x08] = '7', [0x09] = '8', [0x0A] = '9', [0x0B] = '0',
+        [0x0C] = '-', [0x0D] = '=', [0x0E] = '\b', [0x1C] = '\n',
         [0x1E] = 'A', [0x30] = 'B', [0x2E] = 'C', [0x20] = 'D', [0x12] = 'E',
         [0x21] = 'F', [0x22] = 'G', [0x23] = 'H', [0x17] = 'I', [0x24] = 'J',
         [0x25] = 'K', [0x26] = 'L', [0x32] = 'M', [0x31] = 'N', [0x18] = 'O',
         [0x19] = 'P', [0x10] = 'Q', [0x13] = 'R', [0x1F] = 'S', [0x14] = 'T',
         [0x16] = 'U', [0x2F] = 'V', [0x11] = 'W', [0x2D] = 'X', [0x15] = 'Y',
-        [0x2C] = 'Z', [0x39] = ' '
+        [0x2C] = 'Z', [0x39] = ' ', [0x33] = ',', [0x34] = '.', [0x35] = '/'
     };
 
     while (1) {
@@ -124,7 +124,7 @@ void kmain(unsigned int magic1, unsigned int magic2) {
         if (c == 0x0E) {
             if (cmd_idx > 0) {
                 cmd_idx--;
-                vga_backspace();
+                serial_backspace();
             }
             continue;
         }
@@ -133,7 +133,6 @@ void kmain(unsigned int magic1, unsigned int magic2) {
         char tgt = m[c];
         if (!tgt) continue;
 
-        if ((unsigned int)p >= 2000) p = 0;
         if (!shift_pressed && tgt >= 'A' && tgt <= 'Z') tgt += 32;
         if (__builtin_expect(cmd_idx < 255, 1)) cmd_buffer[cmd_idx++] = tgt;
 
