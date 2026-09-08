@@ -12,9 +12,11 @@ good behavior:
 * direct, constructive feedback focused on technical code merits.
 * empathy and respect toward different architectural methodologies.
 * accepting dynamic peer review and optimization critique gracefully.
+* being supportive toward beginners. Do not bully anyone. Making mistakes is completely normal, we are human after all. 
 
 unacceptable behavior:
 * toxic gatekeeping, personal attacks, or bringing politics into the repo.
 * flooding development spaces with nontechnical drama or personal conflicts.
+* gatekeeping, harassing, or mocking developers who are still learning.
 
-as maintainers, we hold absolute authority to clean up, reject, or purge commits, pull requests, and issues that violate this framework. 
+as maintainers, we hold absolute authority to clean up, reject, or purge commits, pull requests, and issues that violate this framework.
