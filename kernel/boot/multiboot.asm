@@ -31,20 +31,20 @@ _start:
     mov dword [0xA000], 0xB003
     mov dword [0xB000], 0x0000 | 0x83
 
-    mov eax, 0x9000
-    mov cr3, eax
-
     mov eax, cr4
-    or eax, 32
+    or eax, 1 << 5
     mov cr4, eax
 
     mov ecx, 0xC0000080
     rdmsr
-    or eax, 256
+    or eax, 1 << 8
     wrmsr
-    
+
+    mov eax, 0x9000
+    mov cr3, eax
+
     mov eax, cr0
-    or eax, 0x80000000
+    or eax, 1 << 31
     mov cr0, eax
 
     lgdt [g64_desc]
@@ -62,8 +62,8 @@ init_64bit:
     mov gs, ax
     mov ss, ax
 
-    mov rdi, 1686005835
-    mov rsi, 26985
+    mov rdi, 0x36D76289
+    xor rsi, rsi
 
     call kmain
 
