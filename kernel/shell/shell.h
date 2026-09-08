@@ -17,7 +17,7 @@
    with this program; if not, write to the Free Software Foundation, Inc.,
    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. 
 
-*/
+*/           
 
 #ifndef SHELL_H
 #define SHELL_H
@@ -30,12 +30,16 @@ char cmd_buffer[256];
 unsigned int cmd_idx = 0;
 extern volatile unsigned char r_dev;
 
-__attribute__((always_inline)) static inline int m_str_cmp(const char* s1, const char* s2) {
-    while (*s1 && (*s1 == *s2)) {
-        s1++;
-        s2++;
+__attribute__((always_inline)) static inline int m_str_ncmp(const char* s1, const char* s2, unsigned int n) {
+    for (unsigned int i = 0; i < n; i++) {
+        if (s1[i] != s2[i]) {
+            return (unsigned char)s1[i] - (unsigned char)s2[i];
+        }
+        if (s1[i] == '\0') {
+            return 0;
+        }
     }
-    return *(unsigned char*)s1 - *(unsigned char*)s2;
+    return 0;
 }
 
 #include "root.h"
@@ -44,7 +48,7 @@ static inline struct file* find_file_node(const char* name) {
     struct file* file_ptr = root.files;
     const struct file* const end_ptr = root.files + root.file_count;
     while (file_ptr < end_ptr) {
-        if (m_str_cmp(file_ptr->name, name) == 0) {
+        if (m_str_ncmp(file_ptr->name, name, 32) == 0) {
             return file_ptr;
         }
         file_ptr++;
@@ -62,6 +66,20 @@ __attribute__((always_inline)) static inline unsigned int hash_fnv1a(const char*
     return hash;
 }
 
+static inline char* parse_arg(char* cmd, unsigned int cmd_len) {
+    unsigned int i = 0;
+    while (i < cmd_len && cmd[i] != ' ' && cmd[i] != '\0') {
+        i++;
+    }
+    while (i < cmd_len && cmd[i] == ' ') {
+        i++;
+    }
+    if (i >= cmd_len || cmd[i] == '\0') {
+        return (void*)0;
+    }
+    return &cmd[i];
+}
+
 static inline void execute_command(void) {
     cmd_buffer[cmd_idx] = '\0';
     newline();
@@ -72,18 +90,8 @@ static inline void execute_command(void) {
     }
 
     unsigned int cmd_hash = hash_fnv1a(cmd_buffer, cmd_idx);
+    char* arg = parse_arg(cmd_buffer, cmd_idx);
 
-   /*
-    * Note:
-    * 0x41BF7CBE is the pre-calculated FNV-1a 32bit hash value for "REBOOT"
-    * 0xE710FA4A is the pre-calculated FNV-1a 32bit hash value for "SHWDIR"
-    * 0x7C9861DC is the pre-calculated FNV-1a 32bit hash value for "SAY" 
-    * 0x70EC43EF is the pre-calculated FNV-1a 32bit hash value for "GOTO"
-    * 0xB67AA316 is the pre-calculated FNV-1a 32bit hash value for "REMOVE"
-    * 0x7C81A169 is the pre-calculated FNV-1a 32bit hash value for "CPUID"
-    * 0x5B5E05AC is the pre-calculated FNV-1a 32bit hash value for "ROOTED"
-    * 0x5B5E0D5B is the pre-calculated FNV-1a 32bit hash value for "ROOTID"
-    */    
     switch (cmd_hash) {
         case 0x41BF7CBE:
             outb(0x64, 0xFE);
@@ -145,15 +153,15 @@ static inline void execute_command(void) {
             break;
 
         case 0x7C9861DC:
-            if (cmd_idx > 4) {
-                pr(&cmd_buffer[4]);
+            if (arg) {
+                pr(arg);
             }
             newline();
             break;
 
         case 0x70EC43EF:           
-            if (cmd_idx > 5) {
-                const struct file* const target = find_file_node(&cmd_buffer[5]);
+            if (arg) {
+                const struct file* const target = find_file_node(arg);
                 if (target && target->is_dir) {
                     pr("moved to directory: ");
                     pr(target->name);
@@ -167,8 +175,8 @@ static inline void execute_command(void) {
             break;
 
         case 0xB67AA316:
-            if (cmd_idx > 7) {
-                struct file* file_ptr = find_file_node(&cmd_buffer[7]);
+            if (arg) {
+                struct file* file_ptr = find_file_node(arg);
                 if (file_ptr) {
                     const struct file* const end_ptr = root.files + root.file_count;
                     struct file* next_file = file_ptr + 1;
@@ -192,8 +200,8 @@ static inline void execute_command(void) {
                 pr("system is already running in ROOT mode.");
                 newline();
             } else {
-                if (cmd_idx > 7) {
-                    r_toggle(&cmd_buffer[7]);
+                if (arg) {
+                    r_toggle(arg);
                 } else {
                     pr("usage: ROOTED YES");
                     newline();
@@ -220,4 +228,4 @@ static inline void execute_command(void) {
     cmd_idx = 0;
 }
 
-#endif
+#endif      
