@@ -63,8 +63,14 @@ void kmain(unsigned int magic1, unsigned int magic2 __attribute__((unused))) {
     idt_init();
     init();
 
-    root.file_count = 0;
-    pr("yey, kernel");
+        root.file_count = 0;
+
+    pr("welcome to winuz, winuz is a lightweight, fast, freestanding, monolithic 64-bit x86_64 kernel.");
+    newline();
+    pr("this kernel also grants users primitive access to the kernel.");
+    newline();
+    newline();
+    pr("So fast, your hardware is the only speed limit.");
     newline();
     newline();
     pr("> ");
