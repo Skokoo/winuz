@@ -12,7 +12,7 @@ you are also allowed to use casual language as long as it is informative and i c
 
 if your contribution patches a bug, vulnerability, or architectural failure within the code, you are *highly recommended* (not required) to create a report inside the "bugs/" directory.
 
-- the "report" must be written in "rst" format.
-- the "report" must follow the layout in [template.rst](bugs/template.rst).
+the "report" must be written in "rst" format.
+the "report" must follow the layout in [template.rst](../bugs/template.rst).
 
 hope you all the best!
