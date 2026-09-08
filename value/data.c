@@ -23,6 +23,17 @@
  kvar_t (winuz custom variant var): isolated 8byte dynamic data object capable of selfidentifying its own internal data type.
 
  kbitset_t (winuz hardware bitset): custom data type designed from scratch for manipulating individual memory bits.
+
+ Implementation:
+
+ struct kvar_t dynamic_var;
+    kvar_set_int(&dynamic_var, 12345);       
+    unsigned long long bit_buffer[4] = {0};
+    struct kbitset_t page_bitmap;
+    page_bitmap.storage = bit_buffer;
+    page_bitmap.bit_capacity = 256;
+    
+    kbitset_set(&page_bitmap, 45);
  */
 
 /* Code for future */
