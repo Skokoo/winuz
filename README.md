@@ -54,6 +54,8 @@ you should obtain .bin and .iso files once the execution is complete.
 - storage rules: requires at least a 4kb payload and adheres to standard iso 2048-byte disk block alignment.
 - security check: automatically runs a sha256 verification on both the raw binary and the final iso image.
 
+you know, if i added more things in this kernel, i guess, just guess. Hint: this thing above.
+
 ## community
 
 contribution:
