@@ -22,6 +22,8 @@ you should obtain .bin and .iso files once the execution is complete.
 
 ## what's actually going on (for now)
 
+> hey you, yes you, is this thing formal?
+
 ### bare metal stuff
 - no dynamic memory layout here. it's standing free.
 - talks directly to the hardware using raw port i/o and manual cr0/cr3/cr4 register tweaks.
