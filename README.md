@@ -5,6 +5,21 @@ winuz is a lightweight, fast, freestanding, monolithic 64bit x86_64 kernel. This
 
 your hardware is the only speed limit.
 
+## deployment & compilation
+
+to build the iso file, execute this following command:
+
+```bash
+git clone https://github.com/Skokoo/winuz
+cd winuz/kernel
+
+# compile the iso
+make clean && make
+```
+dont worry, the make execution is fast, even though the auditing logs will flood your terminal pipeline.
+
+you should obtain .bin and .iso files once the execution is complete.
+
 ## what's actually going on (for now)
 
 ### bare metal stuff
@@ -28,29 +43,14 @@ your hardware is the only speed limit.
 - absolutely zero undefined symbols and no stdlib pollution (even memset and memcpy are custom-built).
 
 ### automated build audits
-- instantly checks for multiboot2 magic headers and validates the 64-bit elf binary.
+- instantly checks for multiboot2 magic headers and validates the 64bit elf binary.
 - hard blocks against vector instructions (xmm/ymm) and redzone violations.
 - super clean binaries: no nop sleds, no sketchy w+x permissions, and no dynamic interpreters.
 - zero relocation artifacts (like r_x86_64_relative) and absolutely no .got/.plt tables.
-- proper alignment: 32-bit word alignment, 4k .text alignment, and forces the entry point within the 1mb mark.
+- proper alignment: 32bit word alignment, 4k .text alignment, and forces the entry point within the 1mb mark.
 - keeps things ultra-light by capping local stack frames at 255 bytes max.
 - storage rules: requires at least a 4kb payload and adheres to standard iso 2048-byte disk block alignment.
 - security check: automatically runs a sha256 verification on both the raw binary and the final iso image.
-
-## deployment & compilation
-
-to build the iso file, execute this following command:
-
-```bash
-git clone https://github.com/Skokoo/winuz
-cd winuz/kernel
-
-# compile the iso
-make clean && make
-```
-dont worry, the make execution is fast, even though the auditing logs will flood your terminal pipeline.
-
-you should obtain .bin and .iso files once the execution is complete.
 
 ## community
 
