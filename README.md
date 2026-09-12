@@ -50,7 +50,7 @@ you should obtain .bin and .iso files once the execution is complete.
 - super clean binaries: no nop sleds, no sketchy w+x permissions, and no dynamic interpreters.
 - zero relocation artifacts (like r_x86_64_relative) and absolutely no .got/.plt tables.
 - proper alignment: 32bit word alignment, 4k .text alignment, and forces the entry point within the 1mb mark.
-- keeps things ultra-light by capping local stack frames at 255 bytes max.
+- keeps things light (not that "light", it is light) by capping local stack frames at 255 bytes max.
 - storage rules: requires at least a 4kb payload and adheres to standard iso 2048-byte disk block alignment.
 - security check: automatically runs a sha256 verification on both the raw binary and the final iso image.
 
