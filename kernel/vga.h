@@ -24,6 +24,10 @@
 
 #include "io.h"
 
+/*
+ * note this is not vga, it is serial
+*/
+
 static inline void putc_serial(char c) {
     unsigned short port_status = 0x3FD;
     unsigned char status;
