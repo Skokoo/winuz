@@ -90,15 +90,12 @@ __attribute__((naked)) void isr0(void) {
         "pop %%rcx\n\t"
         "pop %%rax\n\t"
         "iretq"
-        :
-        :
-        : "memory"
+        : : : "memory"
     );
 }
 
 __attribute__((naked)) void isr13(void) {
     __asm__ volatile (
-        "add $8, %%rsp\n\t"
         "push %%rax\n\t"
         "push %%rcx\n\t"
         "push %%rdx\n\t"
@@ -122,16 +119,14 @@ __attribute__((naked)) void isr13(void) {
         "pop %%rdx\n\t"
         "pop %%rcx\n\t"
         "pop %%rax\n\t"
+        "add $8, %%rsp\n\t"
         "iretq"
-        :
-        :
-        : "memory"
+        : : : "memory"
     );
 }
 
 __attribute__((naked)) void isr14(void) {
     __asm__ volatile (
-        "add $8, %%rsp\n\t"
         "push %%rax\n\t"
         "push %%rcx\n\t"
         "push %%rdx\n\t"
@@ -155,10 +150,9 @@ __attribute__((naked)) void isr14(void) {
         "pop %%rdx\n\t"
         "pop %%rcx\n\t"
         "pop %%rax\n\t"
+        "add $8, %%rsp\n\t"
         "iretq"
-        :
-        :
-        : "memory"
+        : : : "memory"
     );
 }
 
