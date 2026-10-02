@@ -22,7 +22,7 @@
 #include "io.h"
 #include "paging.h"
 #include "vfs.h"
-#includd "alloc/kalloc.h"
+#include "alloc/kalloc.h"
 #include "vga.h"
 #include "idt.h"
 #include "shell/shell.h"
