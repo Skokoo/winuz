@@ -22,6 +22,7 @@
 #include "io.h"
 #include "paging.h"
 #include "vfs.h"
+#includd "alloc/kalloc.h"
 #include "vga.h"
 #include "idt.h"
 #include "shell/shell.h"
@@ -61,6 +62,8 @@ void kmain(unsigned int magic1, unsigned int magic2 __attribute__((unused))) {
     }
 
     idt_init();
+    kalloc_init();
+    storage_explore(0); 
     init();
 
         root.file_count = 0;
