@@ -165,7 +165,7 @@ void* storage_read_file(unsigned int inode_id, unsigned char* out_buf){
         
         burst_cnt = 1;
         while((i + burst_cnt < 12) && 
-              (i + burst_cnt < (int)need) && 
+              (i + burst_cnt < need) && 
               (in.blocks[i + burst_cnt] == in.blocks[i] + burst_cnt)) {
             burst_cnt++;
         }
