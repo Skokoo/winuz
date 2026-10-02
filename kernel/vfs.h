@@ -31,98 +31,157 @@ struct file {
     unsigned char is_dir;
 };
 
+struct sfs_inode {
+    unsigned int size;
+    unsigned int type;
+    unsigned int blocks[12];
+};
+
+struct sfs_dirent {
+    char name[28];
+    unsigned int inode_id;
+};
+
+struct sfs_superblock {
+    unsigned int magic;
+    unsigned int total_blocks;
+    unsigned int inode_count;
+    unsigned int inode_start_block;
+    unsigned int data_start_block;
+};
+
 struct vfs_root {
     struct file files[64];
     unsigned int file_count;
 };
 
 struct vfs_root root;
+static unsigned int cached_inode_start = 0;
 
-static inline void ata_wait(void) {
-    inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
-}
+__attribute__((aligned(64))) static unsigned char static_scratchpad[1536];
 
-static inline int ata_read_sector(unsigned int lba, unsigned short* buf) {
-    outb(0x1F6, 0xE0 | ((lba >> 24) & 0x0F));
-    outb(0x1F2, 1);
-    outb(0x1F3, (unsigned char)lba);
-    outb(0x1F4, (unsigned char)(lba >> 8));
-    outb(0x1F5, (unsigned char)(lba >> 16));
-    outb(0x1F7, 0x20);
-
-    unsigned int timeout = 0;
-    while (!(inb(0x1F7) & 0x08)) {
-        timeout++;
-        if (__builtin_expect(timeout > 10000000, 0)) {
-            return 0;
-        }
-        __asm__ volatile ("pause");
-    }
-
-    __asm__ volatile (
-        "cld\n\t"
-        "rep insw"
-        : "+D"(buf)
-        : "d"(0x1F0), "c"(256)
-        : "memory"
-    );
-    ata_wait();
-    return 1;
-}
+extern int ata_read_sector(unsigned int lba, unsigned short* buf);
+extern int ata_read_sectors(unsigned int lba, unsigned char count, unsigned short* buf);
 
 int storage_explore(unsigned int lba_root_dir) {
-    unsigned short sector_buf[256];
-    unsigned char* byte_buf = (unsigned char*)sector_buf;
+    int i, k, count;
+    unsigned int inode_block, offset, data_block;
+    struct sfs_superblock *sb;
+    struct sfs_inode ri;
+    struct sfs_dirent de[512 / sizeof(struct sfs_dirent)];
+    struct file *f;
+    unsigned char *buf1;
 
+    buf1 = static_scratchpad;
     root.file_count = 0;
-    if (!ata_read_sector(lba_root_dir, sector_buf)) {
+
+    if(!ata_read_sector(lba_root_dir, (unsigned short*)buf1)){
         return -1;
     }
 
-    unsigned char* entry_ptr = byte_buf;
-    const unsigned char* const end_entry_ptr = byte_buf + 512;
-
-    while (entry_ptr < end_entry_ptr) {
-        if (*entry_ptr == 0x00) break;
-
-        unsigned char attr = *(entry_ptr + 11);
-        if (*entry_ptr == 0xE5 || attr == 0x0F) {
-            entry_ptr += 32;
-            continue;
-        }
-
-        if (root.file_count >= 64) break;
-
-        struct file* f = &root.files[root.file_count];
-        int name_idx = 0;
-
-        const char* name_part = (const char*)entry_ptr;
-        int i = 0;
-        while (i < 8 && name_part[i] != ' ' && name_idx < 27) {
-            f->name[name_idx++] = name_part[i++];
-        }
-
-        if (!(attr & 0x10)) {
-            f->name[name_idx++] = '.';
-            const char* ext_part = (const char*)(entry_ptr + 8);
-            int j = 0;
-            while (j < 3 && ext_part[j] != ' ' && name_idx < 31) {
-                f->name[name_idx++] = ext_part[j++];
-            }
-            if (f->name[name_idx - 1] == '.') {
-                name_idx--;
-            }
-        }
-        f->name[name_idx] = '\0';
-
-        f->is_dir = (attr & 0x10) ? 1 : 0;
-        f->cluster = *(unsigned short*)(entry_ptr + 26);
-        f->size = *(unsigned int*)(entry_ptr + 28);
-
-        root.file_count++;
-        entry_ptr += 32;
+    sb = (struct sfs_superblock*)buf1;
+    if(sb->magic != 0x47494C41){
+        return -2;
     }
+
+    cached_inode_start = sb->inode_start_block;
+
+    if(!ata_read_sector(cached_inode_start, (unsigned short*)buf1)){
+        cached_inode_start = 0;
+        return -3;
+    }
+
+    ri = *(struct sfs_inode*)buf1;
+    if(ri.type != 2){
+        return -4;
+    }
+
+    data_block = ri.blocks[0];
+
+    if(!ata_read_sector(data_block, (unsigned short*)buf1)){
+        return -5;
+    }
+
+    count = 512 / sizeof(struct sfs_dirent);
+    
+    for(i=0; i<count; i++) {
+        de[i] = ((struct sfs_dirent*)buf1)[i];
+    }
+
+    for(i=0; i<count; i++){
+        if(de[i].inode_id == 0) continue;
+        if(root.file_count >= 64) break;
+
+        inode_block = cached_inode_start + (de[i].inode_id * sizeof(struct sfs_inode)) / 512;
+        offset = (de[i].inode_id * sizeof(struct sfs_inode)) % 512;
+
+        if(!ata_read_sectors(inode_block, 2, (unsigned short*)buf1)) continue;
+
+        struct sfs_inode fi = *(struct sfs_inode*)(buf1 + offset);
+        f = &root.files[root.file_count];
+
+        for(k=0; k<28; k++){
+            f->name[k] = de[i].name[k];
+            if(de[i].name[k] == 0) break;
+        }
+        f->name[31] = 0;
+
+        f->is_dir = (fi.type == 2) ? 1 : 0;
+        f->cluster = de[i].inode_id;
+        f->size = fi.size;
+        root.file_count++;
+    }
+
     return root.file_count;
+}
+
+void* storage_read_file(unsigned int inode_id, unsigned char* out_buf){
+    int i;
+    unsigned int b, off, need, burst_cnt;
+    struct sfs_superblock *sb;
+    struct sfs_inode in;
+    unsigned char *dst;
+    unsigned char *buf2;
+
+    if(cached_inode_start == 0) {
+        if(!ata_read_sector(0, (unsigned short*)static_scratchpad)) return 0;
+        sb = (struct sfs_superblock*)static_scratchpad;
+        cached_inode_start = sb->inode_start_block;
+    }
+
+    buf2 = static_scratchpad;
+    b = cached_inode_start + (inode_id * sizeof(struct sfs_inode)) / 512;
+    off = (inode_id * sizeof(struct sfs_inode)) % 512;
+
+    if(!ata_read_sectors(b, 2, (unsigned short*)buf2)) return 0;
+    in = *(struct sfs_inode*)(buf2 + off);
+
+    need = (in.size + 511) / 512;
+    dst = out_buf;
+
+    i = 0;
+    while(i < 12 && i < (int)need) {
+        if(in.blocks[i] == 0) break;
+        
+        burst_cnt = 1;
+        while((i + burst_cnt < 12) && 
+              (i + burst_cnt < (int)need) && 
+              (in.blocks[i + burst_cnt] == in.blocks[i] + burst_cnt)) {
+            burst_cnt++;
+        }
+
+        if(burst_cnt > 1) {
+            if(!ata_read_sectors(in.blocks[i], (unsigned char)burst_cnt, (unsigned short*)dst)) return 0;
+            dst = dst + (512 * burst_cnt);
+            i = i + burst_cnt;
+        } else {
+            if(!ata_read_sector(in.blocks[i], (unsigned short*)dst)) return 0;
+            dst = dst + 512;
+            i = i + 1;
+        }
+    }
+
+    return out_buf;
 }
 
 #endif
