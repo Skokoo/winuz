@@ -63,11 +63,9 @@ void kmain(unsigned int magic1, unsigned int magic2 __attribute__((unused))) {
 
     idt_init();
     kalloc_init();
+    root.file_count = 0;
     storage_explore(0); 
     init();
-
-        root.file_count = 0;
-
     pr("winuz kernel yey");
     newline();
     newline();
