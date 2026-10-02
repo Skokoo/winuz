@@ -1,8 +1,8 @@
 #ifndef KALLOC_H
 #define KALLOC_H
 
-#include "io.h"
-#include "vga.h"
+#include "../io.h"
+#include "../vga.h"
 
 struct small_node {
     struct small_node *next;
