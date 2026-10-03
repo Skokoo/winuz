@@ -22,12 +22,14 @@
 #ifndef IO_H
 #define IO_H
 
+/* read 1 byte data from spesific hardware I/O port (incase you forgot) */
 static inline unsigned char inb(unsigned short port){
     unsigned char r;
     __asm__ volatile("inb %1, %0" : "=a"(r) : "Nd"(port));
     return r;
 }
 
+/* read 1 byte data to spesific hardware I/O port (incase you forgot again) */
 static inline void outb(unsigned short port, unsigned char v){
     __asm__ volatile("outb %0, %1" :: "a"(v), "Nd"(port));
 }
@@ -36,20 +38,25 @@ static inline void io_wait(void){
     __asm__ volatile("outb %%al, $0x80" :: "a"(0));
 }
 
+/* copies a 64bit memory block from source to "destination" (AGAIN INCASE I, MYSELF, YES, FORGOT)*/
 static inline void mcpy64(void* dest, const void* src, unsigned int count){
-    if(!count) return;
+    if(!count) return; /* am i even need to explain this? */
     __asm__ volatile("cld; rep movsq" :: "D"(dest), "S"(src), "c"(count) : "memory");
 }
 
+/* fills a memory block with a "specific special things" 64bit value using string "primitives" (incase incase)*/
 static inline void mset64(void* dest, unsigned long long val, unsigned int count){
     if(!count) return;
     __asm__ volatile("cld; rep stosq" :: "D"(dest), "a"(val), "c"(count) : "memory");
 }
 
+/* yk i hate adding comment into "if(!count) return;" */
+
 static inline void ata_wait(void){
     inb(0x1F7); inb(0x1F7); inb(0x1F7); inb(0x1F7);
 }
 
+/* reads 1 sector from the hard drive using 28bit lba */
 static inline int ata_read_sector(unsigned int lba, unsigned short* buf){
     unsigned int timeout = 0;
 
@@ -59,18 +66,25 @@ static inline int ata_read_sector(unsigned int lba, unsigned short* buf){
     outb(0x1F4, (unsigned char)(lba >> 8));
     outb(0x1F5, (unsigned char)(lba >> 16));
     outb(0x1F7, 0x20);
-
+    /* 
+     * swap this stupid polling loop with ATA interrupts in da future.
+     * instead of "chopping" cpu cycles here, "thy" should yield the thread and wait for the irq flag.
+     */
     while(!(inb(0x1F7) & 0x08)){
         timeout++;
-        if(timeout > 10000000) return 0;
+        if(timeout > 10000000) return 0; /* loop escape thing on hardware failure */
         __asm__ volatile("pause");
     }
-
+    /* 
+     * THIS ONE TO, PLS UPGRADE PIO MODE TO BUSSSS MASTERING DMA IN DA FUTURE.
+     * this will offload the data transfer entirely to the disk controller.
+     */
     __asm__ volatile("cld; rep insl" :: "D"(buf), "d"(0x1F0), "c"(128) : "memory");
     ata_wait();
     return 1;
 }
 
+/* reads multiple sequential disk sectors in a "single" burst operation */
 static inline int ata_read_sectors(unsigned int lba, unsigned char count, unsigned short* buf){
     unsigned int timeout;
     unsigned char i;
@@ -92,7 +106,7 @@ static inline int ata_read_sectors(unsigned int lba, unsigned char count, unsign
             __asm__ volatile("pause");
         }
         __asm__ volatile("cld; rep insl" :: "D"(buf), "d"(0x1F0), "c"(128) : "memory");
-        buf += 256;
+        buf += 256; /* advances pointer by 512 bytes */
     }
 
     ata_wait();
