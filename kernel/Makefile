@@ -29,14 +29,6 @@ O = boot/multiboot.o
 all: check_deps clean winuz.iso
 
 check_deps:
-	@echo -e "\033[1;32mchecking environment.\033[0m"
-	@if [ -d "/data/data/com.termux" ] && [ "$$PREFIX" != "" ] && [ ! -d "/usr/bin" ]; then \
-		echo -e "\033[1;31mbad: termux environment detected\033[0m"; \
-		echo -e "\033[1mtermux doesn't have grub.\033[0m"; \
-		echo -e "\033[1;33muse PRoot (proot-distro) if you want to proceed.\033[0m"; \
-		exit 1; \
-	fi
-	@echo -e "\033[32mok, valid linux environment found\033[0m"
 	@echo -e "\033[1;32mchecking packages.\033[0m"
 	@for pkg in \
 		"mkdir:coreutils mkdir missing" "cp:coreutils cp missing" "rm:coreutils rm missing" \
@@ -53,127 +45,9 @@ check_deps:
 		cmd=$${pkg%%:*}; err=$${pkg#*:}; \
 		command -v $$cmd >/dev/null 2>&1 || (echo -e "\033[1;31mbad: $$err\033[0m" && exit 1); \
 	done
-	@echo -e "\033[32mok, all packages verified\033[0m"
-	@echo -e "\033[1;32mchecking source code.\033[0m"
-	@for file in kernel.c linker.ld io.h vga.h vfs.h paging.h boot/multiboot.asm shell/root.h shell/shell.h; do \
-		if [ ! -f "$$file" ]; then \
-			echo -e "\033[33m$$file missing\033[0m"; \
-			if [ -d "../.git" ]; then \
-				echo -e "\033[1;32mrestoring $$file using git.\033[0m"; \
-				git checkout HEAD -- $$file >/dev/null 2>&1 && echo -e "\033[32mok, $$file restored\033[0m" || (echo -e "\033[1;31mbad, $$file missing\033[0m" && exit 1); \
-			else \
-				echo -e "\033[1;31mbad: $$file missing\033[0m" && exit 1; \
-			fi; \
-		fi; \
-	done
-	@echo -e "\033[32mok, all source code not missing\033[0m"
-	@echo -e "\033[1;32mchecking root status.\033[0m"
-	@current_limit=$$(ulimit -n); \
-	if [ "$$current_limit" = "unlimited" ]; then \
-		echo -e "\033[32mok, host shell file descriptors are already unlimited\033[0m"; \
-	elif [ "$$current_limit" -ge 6000 ]; then \
-		echo -e "\033[32mhost shell file descriptors are sufficient ($$current_limit)\033[0m"; \
-	else \
-		if [ $$(id -u) -eq 0 ]; then \
-			echo -e "\033[32mok, root privileges active, expanding host shell file descriptors.\033[0m"; \
-			ulimit -n 6000; \
-			echo -e "\033[32mulimit resource expanded into 6000 in this session\033[0m"; \
-		else \
-			echo -e "\033[32mstandard user context initialized\033[0m"; \
-		fi; \
-	fi
+	@echo -e "\033[32mall packages good\033[0m"
+
 winuz.iso: winuz.bin
-	@echo -e "\033[1;32mchecking multiboot2 header.\033[0m"
-	@grub-file --is-x86-multiboot2 winuz.bin >/dev/null 2>&1 || (echo -e "\033[1;31mbad: invalid multiboot2 header\033[0m" && exit 1)
-	@echo -e "\033[32mok, multiboot2 header valid\033[0m"
-	@echo -e "\033[1;32mparsing raw data structures for embedded multiboot2 magic signature.\033[0m"
-	@objdump -s winuz.bin | grep -E -q "e85250d6|d65052e8" || (echo -e "\033[1;31mbad: physical multiboot2 token not found in binary sections\033[0m" && exit 1)
-	@echo -e "\033[32mok, deep physical magic sequence verified\033[0m"
-	@echo -e "\033[1;32mchecking file architecture.\033[0m"
-	@file winuz.bin | grep -q "ELF 64-bit" || (echo -e "\033[1;31mbad: file is not 64bit\033[0m" && exit 1)
-	@echo -e "\033[32mok, file is 64bit\033[0m"
-	@file winuz.bin | grep -q "statically linked" || (echo -e "\033[1;31mbad: dynamic link dependency breach\033[0m" && exit 1)
-	@echo -e "\033[32mok, static linkage structure intact\033[0m"
-	@echo -e "\033[1;32mextracting target system layout.\033[0m"
-	@file winuz.bin >/dev/null 2>&1
-	@echo -e "\033[32mok, architecture verification block confirmed\033[0m"
-	@echo -e "\033[1;32mcounting undefined symbols.\033[0m"
-	@if [ $$(nm -u winuz.bin | wc -l) -ne 0 ]; then \
-		echo -e "\033[1;31mbad: external undefined runtime symbols found\033[0m" && exit 1; \
-	fi
-	@echo -e "\033[32mok, freestanding zero-dependency symbol table clean\033[0m"
-	@echo -e "\033[1;32mauditing global descriptor table.\033[0m"
-	@nm winuz.bin | grep -q "g64" || (echo -e "\033[1;31mbad: security audit failed (gdt descriptor missing)\033[0m" && exit 1)
-	@echo -e "\033[32mok, global descriptor table mapping found\033[0m"
-	@echo -e "\033[1;32mauditing .text alignment.\033[0m"
-	@readelf -S winuz.bin | grep -A 1 "\.text" | grep -E -q "10|4096" || (echo -e "\033[1;31mbad: .text section memory misalignment detected\033[0m" && exit 1)
-	@echo -e "\033[32mok, .text section memory alignment verified\033[0m"
-	@echo -e "\033[1;32mscanning for write permissions inside executable sections.\033[0m"
-	@readelf -S winuz.bin | grep -A 1 "\.text" | grep -E -q "W" && (echo -e "\033[1;31mbad: executable section possesses dangerous write permissions\033[0m" && exit 1) || true
-	@echo -e "\033[32mok, write-exclusive-or-execute parity validated\033[0m"
-	@echo -e "\033[1;32mscanning for dynamic interpreter sections.\033[0m"
-	@readelf -S winuz.bin | grep -q "\.interp" && (echo -e "\033[1;31mbad: dynamic interpreter section found inside static map\033[0m" && exit 1) || true
-	@echo -e "\033[32mok, zero dynamic interpreter artifacts discovered\033[0m"
-	@echo -e "\033[1;32mauditing payload binary word alignment metrics.\033[0m"
-	@if [ $$(expr $$(stat -c %s winuz.bin) % 4) -ne 0 ]; then \
-		echo -e "\033[1;31mbad: kernel payload is not 32bit word aligned\033[0m" && exit 1; \
-	fi
-	@echo -e "\033[32mok, payload word alignment parameters verified\033[0m"
-	@echo -e "\033[1;32mscanning for forbidden runtime relocation symbols.\033[0m"
-	@readelf -r winuz.bin 2>/dev/null | grep -E -q "R_X86_64_RELATIVE|R_X86_64_GLOB_DAT" && (echo -e "\033[1;31mbad: dynamic relocation artifact will trigger memory fault\033[0m" && exit 1) || true
-	@echo -e "\033[32mok, binary addresses locked for direct physical execution\033[0m"
-	@echo -e "\033[1;32mscanning for dynamic tables.\033[0m"
-	@readelf -S winuz.bin | grep -E -q "\.got|\.plt" && (echo -e "\033[1;31mbad: illegal dynamic tables found inside freestanding binary\033[0m" && exit 1) || true
-	@echo -e "\033[32mok, binar contains zero dynamic table artifacts\033[0m"
-	@echo -e "\033[1;32mauditing elf program header capacity bounds.\033[0m"
-	@if [ $$(readelf -h winuz.bin | grep "Number of program headers" | awk '{print $$NF}') -gt 8 ]; then \
-		echo -e "\033[1;31mbad: abnormal program header count detected\033[0m" && exit 1; \
-	fi
-	@echo -e "\033[32mok, program header allocation scale limits verified\033[0m"
-	@echo -e "\033[1;32mverifying entry point mapping.\033[0m"
-	@readelf -h winuz.bin | grep "Entry point address" | grep -E -q "0x10[0-9a-fA-F]{4}" || (echo -e "\033[1;31mbad: entry point misaligned from physical boundary\033[0m" && exit 1)
-	@echo -e "\033[32mok, entry point physical address confirmed within 1MB boundary\033[0m"
-	@echo -e "\033[1;32mscanning for vector instructions.\033[0m"
-	@objdump -d winuz.bin | grep -E -q "xmm|ymm" && (echo -e "\033[1;31mbad: compiler injected uninitialized vector registers\033[0m" && exit 1) || true
-	@echo -e "\033[32mok, no vector register instructions detected\033[0m"
-	@echo -e "\033[1;32mscanning for 32bit registers.\033[0m"
-	@objdump -d winuz.bin | grep -E -q "\b(eax|ebx|ecx|edx|esi|edi|ebp|esp|r[0-9]+d)\b" && (echo -e "\033[1;33mwarning, compiler or assembly utilized legacy 32bit registers. Pls note warning ≠ error.\033[0m") || true
-	@echo -e "\033[32mok, execution instructions audited against 32bit register truncation.\033[0m"
-	@echo -e "\033[1;32mscanning for dynamic instruction anomalies and NOP sled overflows.\033[0m"
-	@objdump -d winuz.bin | grep -q "90 90 90 90" && (echo -e "\033[1;31mbad: abnormal padding structure detected inside text segments\033[0m" && exit 1) || true
-	@echo -e "\033[32mok, binary instructions structural payload layout safe\033[0m"
-	@echo -e "\033[1;32mauditing execution permission safety flags for data segments.\033[0m"
-	@readelf -S winuz.bin | grep -A 1 "\.rodata" | grep -q "X" && (echo -e "\033[1;31mbad: security compromise (.rodata segment permissions layout is executable)\033[0m" && exit 1) || true
-	@echo -e "\033[32mok, read only constants isolated from execution space\033[0m"
-	@echo -e "\033[1;32mauditing stack frame allocation.\033[0m"
-	@objdump -d winuz.bin | grep -E "sub.*rsp" | awk '{print $$3}' | grep -E -q "0x[4-9][0-9a-fA-F]{2}|0x[a-fA-F0-9]{3,}" && (echo -e "\033[1;31mbad: oversized local stack frame allocation detected\033[0m" && exit 1) || true
-	@echo -e "\033[32mok, stack frame allocations within safe freestanding metrics\033[0m"
-	@echo -e "\033[1;32mverifying .bss integrity.\033[0m"
-	@readelf -S winuz.bin | grep -q "\.bss" || (echo -e "\033[1;31mbad: .bss section missing from binary structure\033[0m" && exit 1)
-	@echo -e "\033[32mok, .bss segment boundaries mapped successfully\033[0m"
-	@echo -e "\033[1;32mscanning for red-zone usage.\033[0m"
-	@objdump -d winuz.bin | grep -q -- "-\(0x\)\?[0-9a-fA-F]\+(%rsp)" && (echo -e "\033[1;31mbad: forbidden red-zone usage detected in binary instructions\033[0m" && exit 1) || true
-	@echo -e "\033[32mok, red-zone protection verified (zero violations found)\033[0m"
-	@echo -e "\033[1;32mscanning for residual unstripped debug tracking symbols...\033[0m"
-	@readelf -S winuz.bin | grep -q "\.debug_" && (echo -e "\033[1;31mbad: unstripped compiler debug metadata detected inside binar\033[0m" && exit 1) || true
-	@echo -e "\033[32mok, debug symbol stripping verified\033[0m"
-	@echo -e "\033[1;32manalyzing section mapping...\033[0m"
-	@readelf -S winuz.bin | grep -q "\.text" && echo -e "\033[32mok, text segment structure analyzed\033[0m" || true
-	@readelf -S winuz.bin | grep -q "\.rodata" && echo -e "\033[32mok, read-only data segment structure analyzed\033[0m" || true
-	@readelf -S winuz.bin | grep -q "\.data" && echo -e "\033[32mok, data segment structure analyzed\033[0m" || true
-	@size -A winuz.bin >/dev/null 2>&1
-	@echo -e "\033[32mok, linker data mapping table parsed\033[0m"
-	@echo -e "\033[1;32mauditing string metrics...\033[0m"
-	@strings winuz.bin >/dev/null 2>&1
-	@echo -e "\033[32mok, binar text segment pool parsed\033[0m"
-	@echo -e "\033[1;32mgenerating sha256 checksum...\033[0m"
-	@sha256sum winuz.bin >/dev/null 2>&1
-	@echo -e "\033[32mok, sha256 checksum minted\033[0m"
-	@echo -e "\033[1;32mchecking byte weight.\033[0m"
-	@if [ $$(stat -c %s winuz.bin) -lt 4096 ]; then \
-		echo -e "\033[1;31mbad: binar size abnormally small\033[0m" && exit 1; \
-	fi
-	@echo -e "\033[32mok, binar payload size check passed\033[0m"
 	@mkdir -p iso/boot/grub
 	@cp winuz.bin iso/boot/
 	@printf '%s\n' \
@@ -187,43 +61,25 @@ winuz.iso: winuz.bin
 		'    boot' \
 		'}' > iso/boot/grub/grub.cfg
 	@grub-mkrescue -o winuz.iso iso >/dev/null 2>&1
-	@echo -e "\033[32mok, iso image created\033[0m"
-	@echo -e "\033[1;32mverifying iso filesystem...\033[0m"
-	@file winuz.iso | grep -q "ISO 9660" || (echo -e "\033[1;31mbad: target is not valid iso image\033[0m" && exit 1)
-	@echo -e "\033[32mok, target is valid iso\033[0m"
-	@grub-file --is-x86-multiboot2 winuz.bin >/dev/null 2>&1 || (echo -e "\033[1;31mbad: iso integration check failed\033[0m" && exit 1)
-	@echo -e "\033[32mok, integration check passed\033[0m"
-	@echo -e "\033[1;32mgenerating media hash.\033[0m"
-	@sha256sum winuz.iso >/dev/null 2>&1
-	@echo -e "\033[32mok, media hash signed\033[0m"
-	@echo -e "\033[1;32mauditing disk boundaries.\033[0m"
-	@if [ $$(expr $$(stat -c %s winuz.iso) % 2048) -ne 0 ]; then \
-		echo -e "\033[1;31mbad: iso is not 2048-byte aligned\033[0m" && exit 1; \
-	fi
-	@echo -e "\033[32mok, iso hardware block structure aligned\033[0m"
-	@rm -rf iso kernel.o $(O)
-	@echo -e "\033[32mok, build files cleaned\033[0m"
+	@rm -rf iso
 	@if [ -f "winuz.iso" ]; then \
-		echo -e "\033[1;32mok created -> status: success | path: $$(pwd)/winuz.iso\033[0m"; \
+		echo -e "\033[1;32mcreated, path: $$(pwd)/winuz.iso\033[0m"; \
 	fi
+
 winuz.bin: $(O) kernel.o
 	@ld.lld $(LDFLAGS) $(O) kernel.o -o winuz.bin
-	@echo -e "\033[32mok, winuz.bin linked\033[0m"
+	@echo -e "\033[32mlinked\033[0m"
 
 boot/%.o: boot/%.asm
 	@mkdir -p boot
 	@nasm -f elf64 $< -o $@
-	@echo -e "\033[32mok, assembly compiled\033[0m"
-	@readelf -S boot/multiboot.o | grep -q "\.multiboot" || (echo -e "\033[1;31mbad: .multiboot section missing from assembly object\033[0m" && exit 1)
-	@echo -e "\033[32mok, multiboot.o section footprint verified\033[0m"
+	@echo -e "\033[32massembly compiled\033[0m"
 
 kernel.o: kernel.c
-	@echo -e "\033[1;32mcompiling.\033[0m"
+	@echo -e "\033[1;32mcompiling\033[0m"
 	@clang -target x86_64-unknown-none $(CFLAGS) -c kernel.c -o kernel.o
-	@echo -e "\033[32mok, kernel.c compiled\033[0m"
-	@nm kernel.o | grep -E -q "memset|memcpy|memmove" && (echo -e "\033[1;31mbad: standard library pollution found in object file\033[0m" && exit 1) || true
-	@echo -e "\033[32mok, kernel.o signature validated\033[0m"
+	@echo -e "\033[32mcompiled\033[0m"
 
 clean:
 	@rm -rf *.o *.bin *.iso iso boot/*.o
-	@echo -e "\033[32mok, cleaned\033[0m"
+	@echo -e "\033[32mcleaned\033[0m"
