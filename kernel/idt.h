@@ -21,160 +21,50 @@
 
 #ifndef IDT_H
 #define IDT_H
-
 #include "vga.h"
 
+/* man, if computer was fast at computation, why wouldn't we use that opportunity? */
+
 struct idt_entry {
-    unsigned short low_offset;
-    unsigned short selector;
+    unsigned short off_low;
+    unsigned short sel;
     unsigned char ist;
-    unsigned char type_attr;
-    unsigned short mid_offset;
-    unsigned int high_offset;
-    unsigned int reserved;
+    unsigned char flags;
+    unsigned short off_mid;
+    unsigned int off_high;
+    unsigned int rsv;
 } __attribute__((packed));
 
-struct idt_ptr {
+struct {
     unsigned short limit;
     unsigned long long base;
-} __attribute__((packed));
+} __attribute__((packed)) idtr;
 
-struct idt_entry idt[256];
-struct idt_ptr idtr;
+__attribute__((aligned(64))) struct idt_entry idt[256];
 
-void idt_set_gate(unsigned char num, unsigned long long base, unsigned short sel, unsigned char flags) {
-    idt[num].low_offset = (unsigned short)(base & 0xFFFF);
-    idt[num].selector = sel;
-    idt[num].ist = 0;
-    idt[num].type_attr = flags;
-    idt[num].mid_offset = (unsigned short)((base >> 16) & 0xFFFF);
-    idt[num].high_offset = (unsigned int)((base >> 32) & 0xFFFFFFFF);
-    idt[num].reserved = 0;
+static inline void idt_set(int vec, void *isr){
+    unsigned long long a = (unsigned long long)isr;
+    *(unsigned __int128*)&idt[vec] = (unsigned __int128)(a & 0xFFFF) | (unsigned __int128)8 << 16 | (unsigned __int128)0x8E << 40 | (unsigned __int128)(a & 0xFFFF0000) << 32 | (unsigned __int128)(a >> 32) << 64;
 }
 
-void exception_handler(unsigned long long vector) {
-    pr("cpu exception detected");
-    newline();
-    pr("vector: ");
-    if (vector == 0) pr("0");
-    else if (vector == 13) pr("13");
-    else if (vector == 14) pr("14");
-    else pr("unknown exception");
-    newline();
-    while (1) { __asm__ volatile ("hlt"); }
+__attribute__((noreturn)) void fault_c(unsigned long long vec, unsigned long long err){
+    (void)err;
+    __asm__ volatile("mov $0xE9, %%dx; mov %0, %%al; out %%al, %%dx" :: "r"((char)('0'+vec)) : "dx","al");
+    __asm__ volatile("cli; 1: hlt; jmp 1b" ::: "memory");
+    __builtin_unreachable();
 }
 
-__attribute__((naked)) void isr0(void) {
-    __asm__ volatile (
-        "push %%rax\n\t"
-        "push %%rcx\n\t"
-        "push %%rdx\n\t"
-        "push %%rsi\n\t"
-        "push %%rdi\n\t"
-        "push %%r8\n\t"
-        "push %%r9\n\t"
-        "push %%r10\n\t"
-        "push %%r11\n\t"
-        "mov %%rsp, %%rbp\n\t"
-        "and $-16, %%rsp\n\t"
-        "mov $0, %%rdi\n\t"
-        "call exception_handler\n\t"
-        "mov %%rbp, %%rsp\n\t"
-        "pop %%r11\n\t"
-        "pop %%r10\n\t"
-        "pop %%r9\n\t"
-        "pop %%r8\n\t"
-        "pop %%rdi\n\t"
-        "pop %%rsi\n\t"
-        "pop %%rdx\n\t"
-        "pop %%rcx\n\t"
-        "pop %%rax\n\t"
-        "iretq"
-        : : : "memory"
-    );
+__attribute__((naked)) void isr0(){ __asm__ volatile("push $0; push $0; jmp isr_common"); }
+__attribute__((naked)) void isr13(){ __asm__ volatile("push $13; jmp isr_common"); }
+__attribute__((naked)) void isr14(){ __asm__ volatile("push $14; jmp isr_common"); }
+__attribute__((naked)) void isr_common(){ __asm__ volatile("mov 16(%%rsp), %%rdi; mov 24(%%rsp), %%rsi; call fault_c" ::: "memory"); }
+
+void idt_init(void){
+    void *p = idt;
+    __asm__ volatile("xor %%eax, %%eax; mov $512, %%ecx; rep stosq" : "+D"(p) : : "rax","rcx","memory");
+    idt_set(0, isr0);
+    idt_set(13, isr13);
+    idt_set(14, isr14);
+    __asm__ volatile("sub $10, %%rsp; movw $4095, (%%rsp); mov %0, 2(%%rsp); lidt (%%rsp); add $10, %%rsp; sti" :: "r"(idt) : "memory");
 }
-
-__attribute__((naked)) void isr13(void) {
-    __asm__ volatile (
-        "push %%rax\n\t"
-        "push %%rcx\n\t"
-        "push %%rdx\n\t"
-        "push %%rsi\n\t"
-        "push %%rdi\n\t"
-        "push %%r8\n\t"
-        "push %%r9\n\t"
-        "push %%r10\n\t"
-        "push %%r11\n\t"
-        "mov %%rsp, %%rbp\n\t"
-        "and $-16, %%rsp\n\t"
-        "mov $13, %%rdi\n\t"
-        "call exception_handler\n\t"
-        "mov %%rbp, %%rsp\n\t"
-        "pop %%r11\n\t"
-        "pop %%r10\n\t"
-        "pop %%r9\n\t"
-        "pop %%r8\n\t"
-        "pop %%rdi\n\t"
-        "pop %%rsi\n\t"
-        "pop %%rdx\n\t"
-        "pop %%rcx\n\t"
-        "pop %%rax\n\t"
-        "add $8, %%rsp\n\t"
-        "iretq"
-        : : : "memory"
-    );
-}
-
-__attribute__((naked)) void isr14(void) {
-    __asm__ volatile (
-        "push %%rax\n\t"
-        "push %%rcx\n\t"
-        "push %%rdx\n\t"
-        "push %%rsi\n\t"
-        "push %%rdi\n\t"
-        "push %%r8\n\t"
-        "push %%r9\n\t"
-        "push %%r10\n\t"
-        "push %%r11\n\t"
-        "mov %%rsp, %%rbp\n\t"
-        "and $-16, %%rsp\n\t"
-        "mov $14, %%rdi\n\t"
-        "call exception_handler\n\t"
-        "mov %%rbp, %%rsp\n\t"
-        "pop %%r11\n\t"
-        "pop %%r10\n\t"
-        "pop %%r9\n\t"
-        "pop %%r8\n\t"
-        "pop %%rdi\n\t"
-        "pop %%rsi\n\t"
-        "pop %%rdx\n\t"
-        "pop %%rcx\n\t"
-        "pop %%rax\n\t"
-        "add $8, %%rsp\n\t"
-        "iretq"
-        : : : "memory"
-    );
-}
-
-void idt_init(void) {
-    idtr.limit = (sizeof(struct idt_entry) * 256) - 1;
-    idtr.base = (unsigned long long)&idt;
-
-    for (int i = 0; i < 256; i++) {
-        idt[i].low_offset = 0;
-        idt[i].selector = 0;
-        idt[i].ist = 0;
-        idt[i].type_attr = 0;
-        idt[i].mid_offset = 0;
-        idt[i].high_offset = 0;
-        idt[i].reserved = 0;
-    }
-
-    idt_set_gate(0, (unsigned long long)isr0, 0x08, 0x8E);
-    idt_set_gate(13, (unsigned long long)isr13, 0x08, 0x8E);
-    idt_set_gate(14, (unsigned long long)isr14, 0x08, 0x8E);
-
-    __asm__ volatile ("lidt %0" : : "m"(idtr));
-}
-
 #endif
