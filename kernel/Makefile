@@ -15,7 +15,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. 
 
-CFLAGS = -Wall -Wextra -Werror -Oz -ffreestanding -mno-red-zone \
+CFLAGS = -Wall -Wextra -Werror -Os -ffreestanding -mno-red-zone \
          -mno-mmx -mno-sse -mno-sse2 \
          -fno-exceptions -fno-asynchronous-unwind-tables \
          -fno-pic -fno-pie -fno-plt -fno-stack-protector -ffunction-sections -fdata-sections
