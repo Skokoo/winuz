@@ -14,7 +14,7 @@ cd winuz/kernel
 make clean && make
 ```
 
-it will flood your terminal with some logs, that's normal. it just checks the binary and then gives you the .iso.
+and then gives you the .iso.
 
 ## source code
 
