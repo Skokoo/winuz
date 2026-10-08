@@ -33,9 +33,11 @@ volatile unsigned int ring_head = 0;
 volatile unsigned int ring_tail = 0;
 volatile unsigned char r_dev = 0;
 
-static inline void enqueue_scancode(unsigned char code) {
+static inline void enqueue_scancode(unsigned char code)
+{
     unsigned int next = (ring_head + 1) & 255;
-    if (__builtin_expect(next != ring_tail, 1)) {
+    if(__builtin_expect(next!= ring_tail, 1))
+    {
         ring_buffer[ring_head & 255] = code;
         __sync_synchronize();
         ring_head = next;
@@ -43,8 +45,9 @@ static inline void enqueue_scancode(unsigned char code) {
     }
 }
 
-static inline unsigned char dequeue_scancode(void) {
-    if (ring_head == ring_tail) return 0;
+static inline unsigned char dequeue_scancode(void)
+{
+    if(ring_head == ring_tail) return 0;
     unsigned char code = ring_buffer[ring_tail & 255];
     __sync_synchronize();
     ring_tail = (ring_tail + 1) & 255;
@@ -52,19 +55,23 @@ static inline unsigned char dequeue_scancode(void) {
     return code;
 }
 
-void kmain(unsigned int magic1, unsigned int magic2 __attribute__((unused))) {
+void kmain(unsigned int magic1, unsigned int magic2 __attribute__((unused)))
+{
     serial_init();
 
-    if (__builtin_expect(magic1 != 0x36D76289, 0)) {
+    if(__builtin_expect(magic1!= 0x36D76289, 0))
+    {
         pr("multiboot magic mismatch");
         newline();
-        while(1) { __asm__ volatile ("hlt"); }
+        while(1)
+        {
+            __asm__ volatile ("hlt");
+        }
     }
 
     idt_init();
     kalloc_init();
-    root.file_count = 0;
-    storage_explore(0); 
+    storage_explore(0);
     init();
     pr("winuz kernel yey");
     newline();
@@ -75,7 +82,8 @@ void kmain(unsigned int magic1, unsigned int magic2 __attribute__((unused))) {
     unsigned char shift_pressed = 0;
     unsigned long long loop_counter = 0;
 
-    static const char m[128] = {
+    static const char m[128] =
+    {
         [0x02] = '1', [0x03] = '2', [0x04] = '3', [0x05] = '4', [0x06] = '5',
         [0x07] = '6', [0x08] = '7', [0x09] = '8', [0x0A] = '9', [0x0B] = '0',
         [0x0C] = '-', [0x0D] = '=', [0x0E] = '\b', [0x1C] = '\n',
@@ -87,28 +95,32 @@ void kmain(unsigned int magic1, unsigned int magic2 __attribute__((unused))) {
         [0x2C] = 'Z', [0x39] = ' ', [0x33] = ',', [0x34] = '.', [0x35] = '/'
     };
 
-    while (1) {
+    while(1)
+    {
         unsigned char status = inb(0x64);
-        if (status & 0x01) {
+        if(status & 0x01)
+        {
             enqueue_scancode(inb(0x60));
         }
 
         unsigned char c = dequeue_scancode();
 
-        if (c == 0) {
-            if (proc_active && ((++loop_counter & 0x3FFFFF) == 0)) pr(".");
+        if(c == 0)
+        {
+            if(proc_active && ((++loop_counter & 0x3FFFFF) == 0)) pr(".");
             __asm__ volatile ("pause");
             continue;
         }
 
-        if (c == 0x1D) ctrl_pressed = 1;
-        if (c == 0x9D) ctrl_pressed = 0;
-        if (c == 0x2A || c == 0x36) shift_pressed = 1;
-        if (c == 0xAA || c == 0xB6) shift_pressed = 0;
+        if(c == 0x1D) ctrl_pressed = 1;
+        if(c == 0x9D) ctrl_pressed = 0;
+        if(c == 0x2A || c == 0x36) shift_pressed = 1;
+        if(c == 0xAA || c == 0xB6) shift_pressed = 0;
 
-        if (c & 0x80) continue;
+        if(c & 0x80) continue;
 
-        if (ctrl_pressed && c == 0x2E && proc_active) {
+        if(ctrl_pressed && c == 0x2E && proc_active)
+        {
             proc_active = 0;
             newline();
             pr("keyboard Interrupted");
@@ -116,29 +128,32 @@ void kmain(unsigned int magic1, unsigned int magic2 __attribute__((unused))) {
             pr("> ");
             continue;
         }
-        if (ctrl_pressed && c == 0x2E) continue;
+        if(ctrl_pressed && c == 0x2E) continue;
 
-        if (c == 0x1C) {
+        if(c == 0x1C)
+        {
             execute_command();
             continue;
         }
 
-        if (proc_active) continue;
+        if(proc_active) continue;
 
-        if (c == 0x0E) {
-            if (cmd_idx > 0) {
+        if(c == 0x0E)
+        {
+            if(cmd_idx > 0)
+            {
                 cmd_idx--;
                 serial_backspace();
             }
             continue;
         }
 
-        if (__builtin_expect(c >= 128, 0)) continue;
+        if(__builtin_expect(c >= 128, 0)) continue;
         char tgt = m[c];
-        if (!tgt) continue;
+        if(!tgt) continue;
 
-        if (!shift_pressed && tgt >= 'A' && tgt <= 'Z') tgt += 32;
-        if (__builtin_expect(cmd_idx < 255, 1)) cmd_buffer[cmd_idx++] = tgt;
+        if(!shift_pressed && tgt >= 'A' && tgt <= 'Z') tgt += 32;
+        if(__builtin_expect(cmd_idx < 255, 1)) cmd_buffer[cmd_idx++] = tgt;
 
         char stream[2] = {tgt, 0};
         pr(stream);
