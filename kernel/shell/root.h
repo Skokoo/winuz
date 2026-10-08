@@ -27,13 +27,17 @@
 
 extern volatile unsigned char r_dev;
 
-static inline void r_toggle(const char* param) {
-    if (m_str_ncmp(param, "YES", 4) == 0) {
+static inline void r_toggle(const char* param)
+{
+    if(m_str_ncmp(param, "YES", 4) == 0)
+    {
         r_dev = 1;
         pr("entering ROOT mode, you can do anything to this kernel.");
         newline();
-        pr("Proceed at your own risk.");       
-    } else {
+        pr("Proceed at your own risk.");
+    }
+    else
+    {
         pr("invalid parameter.");
     }
     newline();
