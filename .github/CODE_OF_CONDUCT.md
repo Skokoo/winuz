@@ -2,7 +2,7 @@
 
 ### our pledge
 
-we are here to build a fast, freestanding monolithic kernel. The rule is simple, keep this environment chill, efficient, and completely harassment free for everyone who wants to contribute. 
+rule is simple, keep this environment "chill", efficient, and completely harassment free for everyone who wants to contribute. 
 
 ### our standards
 
@@ -12,7 +12,7 @@ good behavior:
 * direct, constructive feedback focused on technical code merits.
 * empathy and respect toward different architectural methodologies.
 * accepting dynamic peer review and optimization critique gracefully.
-* being supportive toward beginners. Do not bully anyone. Making mistakes is completely normal, we are human after all. 
+* do not bully anyone. Making mistakes is completely normal, we are human. 
 
 unacceptable behavior:
 * toxic gatekeeping, personal attacks, or bringing politics into the repo.
