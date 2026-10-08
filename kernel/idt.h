@@ -21,11 +21,13 @@
 
 #ifndef IDT_H
 #define IDT_H
+
 #include "vga.h"
 
 /* man, if computer was fast at computation, why wouldn't we use that opportunity? */
 
-struct idt_entry {
+struct idt_entry
+{
     unsigned short off_low;
     unsigned short sel;
     unsigned char ist;
@@ -35,31 +37,50 @@ struct idt_entry {
     unsigned int rsv;
 } __attribute__((packed));
 
-struct {
+struct
+{
     unsigned short limit;
     unsigned long long base;
 } __attribute__((packed)) idtr;
 
 __attribute__((aligned(64))) struct idt_entry idt[256];
 
-static inline void idt_set(int vec, void *isr){
+static inline void idt_set(int vec, void *isr)
+{
     unsigned long long a = (unsigned long long)isr;
     *(unsigned __int128*)&idt[vec] = (unsigned __int128)(a & 0xFFFF) | (unsigned __int128)8 << 16 | (unsigned __int128)0x8E << 40 | (unsigned __int128)(a & 0xFFFF0000) << 32 | (unsigned __int128)(a >> 32) << 64;
 }
 
-__attribute__((noreturn)) void fault_c(unsigned long long vec, unsigned long long err){
+__attribute__((noreturn)) void fault_c(unsigned long long vec, unsigned long long err)
+{
     (void)err;
     __asm__ volatile("mov $0xE9, %%dx; mov %0, %%al; out %%al, %%dx" :: "r"((char)('0'+vec)) : "dx","al");
     __asm__ volatile("cli; 1: hlt; jmp 1b" ::: "memory");
     __builtin_unreachable();
 }
 
-__attribute__((naked)) void isr0(){ __asm__ volatile("push $0; push $0; jmp isr_common"); }
-__attribute__((naked)) void isr13(){ __asm__ volatile("push $13; jmp isr_common"); }
-__attribute__((naked)) void isr14(){ __asm__ volatile("push $14; jmp isr_common"); }
-__attribute__((naked)) void isr_common(){ __asm__ volatile("mov 16(%%rsp), %%rdi; mov 24(%%rsp), %%rsi; call fault_c" ::: "memory"); }
+__attribute__((naked)) void isr0()
+{
+    __asm__ volatile("push $0; push $0; jmp isr_common");
+}
 
-void idt_init(void){
+__attribute__((naked)) void isr13()
+{
+    __asm__ volatile("push $13; jmp isr_common");
+}
+
+__attribute__((naked)) void isr14()
+{
+    __asm__ volatile("push $14; jmp isr_common");
+}
+
+__attribute__((naked)) void isr_common()
+{
+    __asm__ volatile("mov 16(%%rsp), %%rdi; mov 24(%%rsp), %%rsi; call fault_c" ::: "memory");
+}
+
+void idt_init(void)
+{
     void *p = idt;
     __asm__ volatile("xor %%eax, %%eax; mov $512, %%ecx; rep stosq" : "+D"(p) : : "rax","rcx","memory");
     idt_set(0, isr0);
@@ -67,4 +88,5 @@ void idt_init(void){
     idt_set(14, isr14);
     __asm__ volatile("sub $10, %%rsp; movw $4095, (%%rsp); mov %0, 2(%%rsp); lidt (%%rsp); add $10, %%rsp; sti" :: "r"(idt) : "memory");
 }
+
 #endif
