@@ -2,7 +2,7 @@
 
 > Source code
 
-winuz is a 64bit x86_64 monolithic kernel written in C (and of course, some inline asm).
+winuz is a "unconventional" 64bit x86_64 monolithic kernel written in C (and of course, some inline asm).
 
 ## deployment & compilation
 
@@ -14,7 +14,7 @@ cd winuz/kernel
 make clean && make
 ```
 
-and then gives you the .iso.
+and then, it gives you the .iso and .bin file
 
 ## source code
 
