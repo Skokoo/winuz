@@ -30,12 +30,16 @@ char cmd_buffer[256];
 unsigned int cmd_idx = 0;
 extern volatile unsigned char r_dev;
 
-__attribute__((always_inline)) static inline int m_str_ncmp(const char* s1, const char* s2, unsigned int n) {
-    for (unsigned int i = 0; i < n; i++) {
-        if (s1[i] != s2[i]) {
+__attribute__((always_inline)) static inline int m_str_ncmp(const char* s1, const char* s2, unsigned int n)
+{
+    for(unsigned int i = 0; i < n; i++)
+    {
+        if(s1[i]!= s2[i])
+        {
             return (unsigned char)s1[i] - (unsigned char)s2[i];
         }
-        if (s1[i] == '\0') {
+        if(s1[i] == '\0')
+        {
             return 0;
         }
     }
@@ -44,11 +48,14 @@ __attribute__((always_inline)) static inline int m_str_ncmp(const char* s1, cons
 
 #include "root.h"
 
-static inline struct file* find_file_node(const char* name) {
+static inline struct file* find_file_node(const char* name)
+{
     struct file* file_ptr = root.files;
     const struct file* const end_ptr = root.files + root.file_count;
-    while (file_ptr < end_ptr) {
-        if (m_str_ncmp(file_ptr->name, name, 32) == 0) {
+    while(file_ptr < end_ptr)
+    {
+        if(m_str_ncmp(file_ptr->name, name, 32) == 0)
+        {
             return file_ptr;
         }
         file_ptr++;
@@ -56,35 +63,43 @@ static inline struct file* find_file_node(const char* name) {
     return (void*)0;
 }
 
-__attribute__((always_inline)) static inline unsigned int hash_fnv1a(const char* str, unsigned int max_len) {
+__attribute__((always_inline)) static inline unsigned int hash_fnv1a(const char* str, unsigned int max_len)
+{
     unsigned int hash = 0x811C9DC5;
-    for (unsigned int i = 0; i < max_len; i++) {
-        if (str[i] == '\0' || str[i] == ' ') break;
+    for(unsigned int i = 0; i < max_len; i++)
+    {
+        if(str[i] == '\0' || str[i] == ' ') break;
         hash ^= (unsigned char)str[i];
         hash *= 0x01000193;
     }
     return hash;
 }
 
-static inline char* parse_arg(char* cmd, unsigned int cmd_len) {
+static inline char* parse_arg(char* cmd, unsigned int cmd_len)
+{
     unsigned int i = 0;
-    while (i < cmd_len && cmd[i] != ' ' && cmd[i] != '\0') {
+    while(i < cmd_len && cmd[i]!= ' ' && cmd[i]!= '\0')
+    {
         i++;
     }
-    while (i < cmd_len && cmd[i] == ' ') {
+    while(i < cmd_len && cmd[i] == ' ')
+    {
         i++;
     }
-    if (i >= cmd_len || cmd[i] == '\0') {
+    if(i >= cmd_len || cmd[i] == '\0')
+    {
         return (void*)0;
     }
     return &cmd[i];
 }
 
-static inline void execute_command(void) {
+static inline void execute_command(void)
+{
     cmd_buffer[cmd_idx] = '\0';
     newline();
 
-    if (cmd_idx == 0) {
+    if(cmd_idx == 0)
+    {
         pr("> ");
         return;
     }
@@ -92,25 +107,34 @@ static inline void execute_command(void) {
     unsigned int cmd_hash = hash_fnv1a(cmd_buffer, cmd_idx);
     char* arg = parse_arg(cmd_buffer, cmd_idx);
 
-    switch (cmd_hash) {
+    switch(cmd_hash)
+    {
         case 0x41BF7CBE:
             outb(0x64, 0xFE);
-            while(1) { __asm__ volatile ("hlt"); }
+            while(1)
+            {
+                __asm__ volatile ("hlt");
+            }
             break;
 
         case 0xE710FA4A:
-            if (root.file_count == 0) {
+            if(root.file_count == 0)
+            {
                 pr("directory is empty.");
-            } else {
+            }
+            else
+            {
                 struct file* file_ptr = root.files;
                 const struct file* const end_ptr = root.files + root.file_count;
 
-                while (file_ptr < end_ptr) {
+                while(file_ptr < end_ptr)
+                {
                     pr(file_ptr->name);
-                    if (file_ptr->is_dir) {
+                    if(file_ptr->is_dir)
+                    {
                         pr("/");
                     }
-                    pr("   ");
+                    pr(" ");
                     file_ptr++;
                 }
             }
@@ -153,66 +177,89 @@ static inline void execute_command(void) {
             break;
 
         case 0x7C9861DC:
-            if (arg) {
+            if(arg)
+            {
                 pr(arg);
             }
             newline();
             break;
 
-        case 0x70EC43EF:           
-            if (arg) {
+        case 0x70EC43EF:
+            if(arg)
+            {
                 const struct file* const target = find_file_node(arg);
-                if (target && target->is_dir) {
+                if(target && target->is_dir)
+                {
                     pr("moved to directory: ");
                     pr(target->name);
-                } else {
+                }
+                else
+                {
                     pr("directory not found.");
                 }
-            } else {
+            }
+            else
+            {
                 pr("usage: GOTO [dir_name]");
             }
             newline();
             break;
 
         case 0xB67AA316:
-            if (arg) {
+            if(arg)
+            {
                 struct file* file_ptr = find_file_node(arg);
-                if (file_ptr) {
+                if(file_ptr)
+                {
                     const struct file* const end_ptr = root.files + root.file_count;
                     struct file* next_file = file_ptr + 1;
-                    while (next_file < end_ptr) {
+                    while(next_file < end_ptr)
+                    {
                         *file_ptr = *next_file;
                         file_ptr++;
                         next_file++;
                     }
-                    root.file_count--;                       
-                } else {
+                    root.file_count--;
+                }
+                else
+                {
                     pr("object not found.");
                 }
-            } else {
+            }
+            else
+            {
                 pr("usage: REMOVE [file_name]");
             }
             newline();
             break;
 
         case 0x5B5E05AC:
-            if (r_dev == 1) {
+            if(r_dev == 1)
+            {
                 pr("system is already running in ROOT mode.");
                 newline();
-            } else {
-                if (arg) {
+            }
+            else
+            {
+                if(arg)
+                {
                     r_toggle(arg);
-                } else {
+                }
+                else
+                {
                     pr("usage: ROOTED YES");
                     newline();
                 }
             }
-            break;                
+            break;
 
-        case 0x5B5E0D5B:            
-            if (r_dev == 1) {
+        case 0x5B5E0D5B:
+            if(r_dev == 1)
+            {
                 pr("1");
-            } else {
+            }
+            else
+            {
                 pr("0");
             }
             newline();
@@ -228,4 +275,4 @@ static inline void execute_command(void) {
     cmd_idx = 0;
 }
 
-#endif      
+#endif
