@@ -28,7 +28,8 @@ __attribute__((aligned(4096))) unsigned long long l4[512];
 __attribute__((aligned(4096))) unsigned long long dp[512];
 __attribute__((aligned(4096))) unsigned long long pd[512];
 
-void init(void) {
+static inline void init(void)
+{
     mset64(l4, 0, 512);
     mset64(dp, 0, 512);
     mset64(pd, 0, 512);
@@ -36,11 +37,12 @@ void init(void) {
     l4[0] = (((unsigned long long)dp) & 0x000FFFFFFFFFF000ULL) | 0x03ULL;
     dp[0] = (((unsigned long long)pd) & 0x000FFFFFFFFFF000ULL) | 0x03ULL;
 
-    unsigned long long addr = 0x83ULL | (1ULL << 63); 
+    unsigned long long addr = 0x83ULL | (1ULL << 63);
     unsigned long long* pd_ptr = pd;
     const unsigned long long* const pd_end = pd + 512;
 
-    while (pd_ptr < pd_end) {
+    while(pd_ptr < pd_end)
+    {
         *pd_ptr = addr;
         addr += 0x200000ULL;
         pd_ptr++;
@@ -50,11 +52,11 @@ void init(void) {
 
     __asm__ volatile (
         "mov %%cr4, %%rax\n\t"
-        "or $0x003000B0, %%rax\n\t" 
+        "or $0x003000B0, %%rax\n\t"
         "mov %%rax, %%cr4\n\t"
         "mov $0xC0000080, %%ecx\n\t"
         "rdmsr\n\t"
-        "or $0x00000900, %%eax\n\t" 
+        "or $0x00000900, %%eax\n\t"
         "wrmsr\n\t"
         "mov %%cr0, %%rax\n\t"
         "movabs $0xFFFFFFFF9FFFFFFF, %%rcx\n\t"
