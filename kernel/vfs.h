@@ -62,146 +62,172 @@ struct vfs_root
 
 struct vfs_root root;
 static unsigned int cached_inode_start = 0;
-
 __attribute__((aligned(64))) static unsigned char static_scratchpad[1536];
-
-extern int ata_read_sector(unsigned int lba, unsigned short* buf);
-extern int ata_read_sectors(unsigned int lba, unsigned char count, unsigned short* buf);
 
 int storage_explore(unsigned int lba_root_dir)
 {
-    int i, k, count;
-    unsigned int inode_block, offset, data_block;
-    struct sfs_superblock *sb;
-    struct sfs_inode ri;
-    struct sfs_dirent de[512 / sizeof(struct sfs_dirent)];
-    struct file *f;
-    unsigned char *buf1;
+    unsigned char* b1 = static_scratchpad;
+    struct sfs_dirent* de;
+    int i = 0;
 
-    buf1 = static_scratchpad;
     root.file_count = 0;
 
-    if(!ata_read_sector(lba_root_dir, (unsigned short*)buf1))
+    if(!ata_read_sector(lba_root_dir, (unsigned short*)b1))
     {
         return -1;
     }
 
-    sb = (struct sfs_superblock*)buf1;
-    if(sb->magic!= 0x47494C41)
+    if(((struct sfs_superblock*)b1)->magic!= 0x47494C41)
     {
         return -2;
     }
 
-    cached_inode_start = sb->inode_start_block;
+    cached_inode_start = ((struct sfs_superblock*)b1)->inode_start_block;
 
-    if(!ata_read_sector(cached_inode_start, (unsigned short*)buf1))
+    if(!ata_read_sector(cached_inode_start, (unsigned short*)b1))
     {
         cached_inode_start = 0;
         return -3;
     }
 
-    ri = *(struct sfs_inode*)buf1;
+    struct sfs_inode ri;
+    mcpy64(&ri, b1, 7);
+
     if(ri.type!= 2)
     {
         return -4;
     }
 
-    data_block = ri.blocks[0];
-
-    if(!ata_read_sector(data_block, (unsigned short*)buf1))
+    if(!ata_read_sector(ri.blocks[0], (unsigned short*)b1))
     {
         return -5;
     }
 
-    count = 512 / sizeof(struct sfs_dirent);
+    de = (struct sfs_dirent*)b1;
 
-    for(i=0; i<count; i++)
+next_entry:
+    if(i >= 16)
     {
-        de[i] = ((struct sfs_dirent*)buf1)[i];
+        goto done;
     }
 
-    for(i=0; i<count; i++)
+    if(de[i].inode_id == 0)
     {
-        if(de[i].inode_id == 0) continue;
-        if(root.file_count >= 64) break;
+        i++;
+        goto next_entry;
+    }
 
-        inode_block = cached_inode_start + (de[i].inode_id * sizeof(struct sfs_inode)) / 512;
-        offset = (de[i].inode_id * sizeof(struct sfs_inode)) % 512;
+    if(root.file_count >= 64)
+    {
+        goto done;
+    }
 
-        if(!ata_read_sectors(inode_block, 2, (unsigned short*)buf1)) continue;
+    {
+        unsigned int blk = cached_inode_start + (de[i].inode_id * 56) / 512;
+        unsigned int off = (de[i].inode_id * 56) & 511;
 
-        struct sfs_inode fi = *(struct sfs_inode*)(buf1 + offset);
-        f = &root.files[root.file_count];
-
-        for(k=0; k<28; k++)
+        if(!ata_read_sectors(blk, 2, (unsigned short*)b1))
         {
-            f->name[k] = de[i].name[k];
-            if(de[i].name[k] == 0) break;
+            i++;
+            goto next_entry;
         }
+
+        struct sfs_inode fi;
+        mcpy64(&fi, b1 + off, 7);
+
+        struct file* f = &root.files[root.file_count];
+        *(unsigned long long*)(f->name) = *(unsigned long long*)(de[i].name);
+        *(unsigned long long*)(f->name+8) = *(unsigned long long*)(de[i].name+8);
+        *(unsigned long long*)(f->name+16) = *(unsigned long long*)(de[i].name+16);
+        *(unsigned long long*)(f->name+24) = 0;
         f->name[31] = 0;
 
-        f->is_dir = (fi.type == 2)? 1 : 0;
+        f->is_dir = (fi.type == 2);
         f->cluster = de[i].inode_id;
         f->size = fi.size;
         root.file_count++;
     }
 
+    i++;
+    goto next_entry;
+
+done:
     return root.file_count;
 }
 
 void* storage_read_file(unsigned int inode_id, unsigned char* out_buf)
 {
-    int i;
-    unsigned int b, off, need, burst_cnt;
-    struct sfs_superblock *sb;
+    unsigned char* b2 = static_scratchpad;
     struct sfs_inode in;
-    unsigned char *dst;
-    unsigned char *buf2;
+    unsigned char* dst = out_buf;
+    int i = 0;
 
-    if(cached_inode_start == 0)
+    if(!cached_inode_start)
     {
-        if(!ata_read_sector(0, (unsigned short*)static_scratchpad)) return 0;
-        sb = (struct sfs_superblock*)static_scratchpad;
-        cached_inode_start = sb->inode_start_block;
+        if(!ata_read_sector(0, (unsigned short*)b2))
+        {
+            return 0;
+        }
+        cached_inode_start = ((struct sfs_superblock*)b2)->inode_start_block;
     }
 
-    buf2 = static_scratchpad;
-    b = cached_inode_start + (inode_id * sizeof(struct sfs_inode)) / 512;
-    off = (inode_id * sizeof(struct sfs_inode)) % 512;
+    unsigned int blk = cached_inode_start + (inode_id * 56) / 512;
+    unsigned int off = (inode_id * 56) & 511;
 
-    if(!ata_read_sectors(b, 2, (unsigned short*)buf2)) return 0;
-    in = *(struct sfs_inode*)(buf2 + off);
-
-    need = (in.size + 511) / 512;
-    dst = out_buf;
-
-    i = 0;
-    while(i < 12 && i < (int)need)
+    if(!ata_read_sectors(blk, 2, (unsigned short*)b2))
     {
-        if(in.blocks[i] == 0) break;
-
-        burst_cnt = 1;
-        while((i + burst_cnt < 12) &&
-              (i + burst_cnt < need) &&
-              (in.blocks[i + burst_cnt] == in.blocks[i] + burst_cnt))
-        {
-            burst_cnt++;
-        }
-
-        if(burst_cnt > 1)
-        {
-            if(!ata_read_sectors(in.blocks[i], (unsigned char)burst_cnt, (unsigned short*)dst)) return 0;
-            dst = dst + (512 * burst_cnt);
-            i = i + burst_cnt;
-        }
-        else
-        {
-            if(!ata_read_sector(in.blocks[i], (unsigned short*)dst)) return 0;
-            dst = dst + 512;
-            i = i + 1;
-        }
+        return 0;
     }
 
+    mcpy64(&in, b2 + off, 7);
+
+    int need = (in.size + 511) >> 9;
+
+read_next:
+    if(i >= 12)
+    {
+        goto read_done;
+    }
+    if(i >= need)
+    {
+        goto read_done;
+    }
+    if(in.blocks[i] == 0)
+    {
+        goto read_done;
+    }
+
+    {
+        int cnt = 1;
+
+cnt_loop:
+        if(i + cnt >= 12)
+        {
+            goto cnt_done;
+        }
+        if(i + cnt >= need)
+        {
+            goto cnt_done;
+        }
+        if(in.blocks[i + cnt]!= in.blocks[i] + cnt)
+        {
+            goto cnt_done;
+        }
+        cnt++;
+        goto cnt_loop;
+
+cnt_done:
+        if(!ata_read_sectors(in.blocks[i], cnt, (unsigned short*)dst))
+        {
+            return 0;
+        }
+        dst += cnt << 9;
+        i += cnt;
+    }
+
+    goto read_next;
+
+read_done:
     return out_buf;
 }
 
