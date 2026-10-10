@@ -22,15 +22,17 @@
 #ifndef IO_H
 #define IO_H
 
-/* oh man i was so LAZY WHEN WRITING THIS CODE */
+/* oh man, i was so LAZY WHEN WRITING THIS CODE */
 
-static inline unsigned char inb(unsigned short port){
+static inline unsigned char inb(unsigned short port)
+{
     unsigned char r;
     __asm__ volatile("inb %w1, %b0" : "=a"(r) : "Nd"(port));
     return r;
 }
 
-static inline void outb(unsigned short port, unsigned char v){
+static inline void outb(unsigned short port, unsigned char v)
+{
     __asm__ volatile("outb %b0, %w1" :: "a"(v), "Nd"(port) : "memory");
 }
 
@@ -72,7 +74,8 @@ ok:
     outb(0x1F6, 0xE0 | ((lba>>24) & 0x0F));
     outb(0x1F7, 0x20);
 
-    for(unsigned int i = 0; i < total; i++){
+    for(unsigned int i = 0; i < total; i++)
+    {
         to = 1000000;
 drq:
         if((inb(0x1F7) & 0x88) == 0x08) goto go;
@@ -91,7 +94,8 @@ go:;
     return 1;
 }
 
-static inline int ata_read_sector(unsigned int lba, unsigned short* buf){
+static inline int ata_read_sector(unsigned int lba, unsigned short* buf)
+{
     return ata_read_sectors(lba, 1, buf);
 }
 
